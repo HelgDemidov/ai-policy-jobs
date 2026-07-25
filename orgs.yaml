@@ -1,4 +1,8 @@
-# Organizations wired into the ATS connectors.
+# Organizations wired into the ATS connectors (org-centric: fetch(slug) for
+# ONE known org). See searches.yaml for the complementary query-centric
+# family (fetch(spec) by search term — org/postings come from the data
+# itself, not a pre-known list here). Both write to the same postings table
+# and cross-source dedup via dedup_key (scripts/store.py).
 #
 # To add a new org: find its ATS slug — usually visible as a footer/"powered
 # by" link on the careers page, or guessable and checkable with:
