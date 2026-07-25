@@ -1,0 +1,42 @@
+# Query-centric search specs — organizations and postings come from the data
+# itself, not a pre-known org list (contrast with orgs.yaml).
+#
+# `manual: true` — only runs with `python3 scripts/run.py --linkedin` (currently
+# only LinkedIn, since it's the one rate-limit/ToS-risky source — see
+# docs/tech_specs/query-connectors/spec.md and docs/job-aggregator-landscape.md
+# for why).
+#
+# Query phrasing is NOT interchangeable across sources — what works on one
+# (e.g. Adzuna's `think tank`) may be noise on another. See
+# docs/job-aggregator-landscape.md for the live-tested query lessons behind
+# each entry below before adding new ones by guesswork.
+
+- id: himalayas-policy
+  source: himalayas
+  query: policy
+
+- id: himalayas-ai-governance
+  source: himalayas
+  query: AI governance
+
+- id: adzuna-thinktank-gb
+  source: adzuna
+  phrase: think tank
+  country: gb
+
+- id: adzuna-thinktank-be
+  source: adzuna
+  phrase: think tank
+  country: be
+
+- id: jobspy-linkedin-uk
+  source: jobspy_linkedin
+  query: AI policy analyst
+  location: United Kingdom
+  manual: true
+
+- id: jobspy-indeed-uk
+  source: jobspy_indeed
+  query: '"AI policy" OR "AI governance"'
+  location: United Kingdom
+  country_indeed: UK
