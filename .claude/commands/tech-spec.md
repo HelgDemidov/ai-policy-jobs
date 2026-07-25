@@ -14,7 +14,7 @@ Grounding — apply on every pass, not just the first:
 - **Data.** This repo has a live `data/jobs.db`. Any quantitative claim — how noisy a source is, how many rows a change affects, how large an LLM payload would be — must be **measured** with `.venv/bin/python` + `sqlite3`, never estimated. Read-only queries only; a spec session must not write to it.
 - **World.** Facts that move — Adzuna's free-tier quota, model pricing and API shape, a job board's query semantics, scheduler behavior — verify live before they enter the spec. Public read-only API probes are cheap and are this project's established habit (`docs/job-aggregator-landscape.md` is entirely built from them).
 - **Idempotency and the two storage families.** `run.py` is safely re-runnable: a repeat run yields 0 new rows and only bumps `last_seen`. The ATS family reconciles missing postings to `likely_closed`; the search family must not (see the `store.py` module docstring for why). A spec touching either preserves that. It must also never make a *successful-but-empty* response indistinguishable from "everything closed".
-- **Hermetic tests.** `tests/` must never touch the live `data/jobs.db` and never hit the network. Recorded live trap: `run.main()` resolves `searches_path` to the real `searches.yaml` by default, so a test that forgets to override it silently calls Himalayas/Adzuna/JobSpy on every `pytest` run. Any spec adding a code path states how its tests stay hermetic.
+- **Hermetic tests.** `tests/` must never touch the live `data/jobs.db` and never hit the network — and nothing enforces this structurally (`tests/conftest.py` holds only a Streamlit-cache fixture). Cleanliness rests on every test passing `tmp_path` explicitly and overriding `searches_path`. Recorded live trap: `run.main()` resolves `searches_path` to the real `searches.yaml` by default, so a test that forgets silently calls Himalayas/Adzuna/JobSpy on every `pytest` run. Any spec adding a code path states how its tests stay hermetic.
 
 ## Step 1 — Ground
 
@@ -75,6 +75,8 @@ Target 40–90 lines. Go longer only when the content earns it.
 
 Status vocabulary — small and fixed, so a future session can tell built from planned at a glance:
 `черновик v1` → `черновик v<N>` (после материальной ревизии) → `реализовано (<short-sha>..<short-sha>)`.
+
+The final value is set by `/feature-workflow`, never here. Keep `## План коммитов`, `## Чек-лист реализации`, `## Открытые вопросы` and `## Вне скоупа` present and well-formed even when short — `/feature-workflow` consumes all four directly (plan to follow, boxes to tick, questions to resolve before coding, boundary not to cross).
 
 Section headers stay in Russian, matching `CLAUDE.md` and the existing specs; only these instructions are English. Tone: terse, technical, file-referenced, no marketing language.
 
