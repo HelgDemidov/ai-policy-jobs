@@ -1,0 +1,42 @@
+# Organizations wired into the ATS connectors.
+#
+# To add a new org: find its ATS slug — usually visible as a footer/"powered
+# by" link on the careers page, or guessable and checkable with:
+#   curl -s -o /dev/null -w "%{http_code}\n" https://api.lever.co/v0/postings/<slug>?mode=json
+#   curl -s -o /dev/null -w "%{http_code}\n" https://boards-api.greenhouse.io/v1/boards/<slug>/jobs
+#   curl -s -o /dev/null -w "%{http_code}\n" https://<slug>.jobs.personio.com/xml
+# Always verify the returned content is actually the expected org before
+# trusting a 200 — short/generic slugs can coincidentally match an unrelated
+# company (happened with "iai" on Greenhouse during the initial pass — a UK
+# tech firm, not Istituto Affari Internazionali).
+#
+# Sweep of ~24 Tier A/B think tanks from think-tank-shortlist.html (2026-07-25)
+# found almost none on a public-API ATS — most run bespoke/custom career
+# pages (confirmed: GovAI, Chatham House, RAND Europe, CLTR, Ada Lovelace,
+# CSER, The Future Society, Rethink Priorities/IAPS, Egmont, Bruegel, EUISS,
+# DGAP, Bertelsmann, Clingendael, St.Gallen, UNIDIR, IAI, IISS, LawAI, BCSP,
+# Institute Alternative). ECFR was the one hit, on Personio — see BACKLOG.md.
+#
+# tier mirrors think-tank-shortlist.html: A = remote/Montenegro-Serbia,
+# B = Western Europe, C = US/Japan.
+
+- org: Epoch AI
+  tier: A
+  ats: lever
+  slug: epoch-ai
+- org: Apollo Research
+  tier: B
+  ats: lever
+  slug: apolloresearch
+- org: Future of Life Institute
+  tier: A/B
+  ats: lever
+  slug: futureof-life
+- org: Center for AI Safety
+  tier: C
+  ats: lever
+  slug: aisafety
+- org: European Council on Foreign Relations
+  tier: B
+  ats: personio
+  slug: ecfr
