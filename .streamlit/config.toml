@@ -1,0 +1,9 @@
+[theme.light]
+primaryColor = "#1E88E5"
+
+[theme.dark]
+# "Deep summer night" — warm indigo sky + firefly-gold accent, not the generic gray dark theme.
+backgroundColor = "#1b1533"
+secondaryBackgroundColor = "#271f4a"
+textColor = "#f3ecd9"
+primaryColor = "#f2b84b"
