@@ -20,7 +20,9 @@
 - **`docs/ats-aggregator-sweep.md`** — направление 1: сверка ATS-платформ (Lever/Greenhouse/Personio) для организаций шортлиста.
 - **`docs/job-aggregator-landscape.md`** — обновление знаний по query-centric job-агрегаторам (JobSpy, RemoteOK, Himalayas, Adzuna) — курс на смену подхода org-centric → query-centric.
 - **`think-tank-shortlist.html`** — канонический артефакт-шортлист организаций (также опубликован как Claude Artifact — при обновлении republish того же file_path, чтобы не плодить новые ссылки).
-- **`docs/tech_specs/query-connectors/spec.md`** — спек и реализация query-centric коннекторов (Himalayas/Adzuna/JobSpy) — вторая, дополняющая семья к org-centric ATS.
+- **`docs/tech_specs/query-connectors/spec.md`** — спек query-centric коннекторов (Himalayas/Adzuna/JobSpy) — вторая, дополняющая семья к org-centric ATS. Статус: реализовано.
+- **`docs/tech_specs/triage-and-autonomy/spec.md`** — спек LLM-триажа релевантности, надёжности прогона и автозапуска. Статус: черновик, не реализован.
+- **`.claude/commands/tech-spec.md`** — кастомная команда `/tech-spec`: превращает запрос в структурированный спек по конвенции `docs/tech_specs/<slug>/spec.md` (лёгкая адаптация одноимённой команды из G2AI_ME под этот репо).
 - **`orgs.yaml`** (org-centric: known org → ATS) + **`searches.yaml`** (query-centric: search term → orgs/postings из данных) + **`scripts/`** — рабочий инструмент мониторинга вакансий → локальный SQLite (`data/jobs.db`, gitignored). Запуск: **`.venv/bin/python scripts/run.py`** (НЕ bare `python3` — с добавлением `python-jobspy`/`pandas` системного python недостаточно). С 2026-07-25 один прогон покрывает все источники, включая LinkedIn; флаг `--linkedin` остался в коде, но ни один спек больше не помечен `manual: true`, так что он ни на что не влияет.
 - **`docs/user_guides/cli_reference.md`** — краткая шпаргалка команд для ручного управления (адрес Streamlit-UI, прямой доступ к БД, формат конфигов).
 - **`app.py`** — карточный веб-интерфейс просмотра вакансий (Streamlit, свой `.venv/`). Запуск: `.venv/bin/streamlit run app.py`.

@@ -1,6 +1,6 @@
 # Спек: query-centric коннекторы (Himalayas + Adzuna + JobSpy)
 
-Статус: черновик v1 · 2026-07-25
+Статус: реализовано (`221baf8`..`6da94bc`, живой смок `f4293c6`) · 2026-07-25
 Происхождение: `docs/BACKLOG.md` «Следующие шаги» п.1; обоснование выбора источников — `docs/job-aggregator-landscape.md` (живое тестирование 2026-07-25).
 
 ## 0. Что и зачем
@@ -97,22 +97,30 @@
 
 ## План коммитов/PR
 
-(План — на момент, когда куратор решит начать коммитить; сейчас репо без коммитов.)
+Выполнен полностью; фактические коммиты (репозиторий локальный, PR-потока нет — работа легла в `master`):
 
-1. `feat(store): dedup_key + upsert_search_postings + expire_stale — поисковая семья хранения`
-2. `feat(connectors): himalayas + adzuna коннекторы (+ .env-парсер)`
-3. `feat(connectors): jobspy-обёртка (linkedin/indeed)`
-4. `feat(run): searches.yaml + оркестрация поисков + --linkedin + тир-эвристика`
+1. `221baf8` — `feat(store): dedup_key + upsert_search_postings + expire_stale — поисковая семья хранения`
+2. `d3a06cf` — `feat(connectors): himalayas + adzuna query-centric коннекторы`
+3. `80579af` — `feat(connectors): jobspy-обёртка (linkedin/indeed)`
+4. `6da94bc` — `feat(run): searches.yaml + оркестрация поисков + --linkedin + тир-эвристика`
+5. `f4293c6` — `docs: живой смок-тест query-connectors + обновление BACKLOG.md/CLAUDE.md/orgs.yaml`
 
 ## Чек-лист реализации
 
-- [ ] store: `_ensure_column`, `upsert_search_postings`, `expire_stale_search_postings` + тесты
-- [ ] `scripts/himalayas.py` + живая сверка имён полей + фикстуры + тесты
-- [ ] `scripts/adzuna.py` + `.env`-парсер + живая сверка `redirect_url` + тесты
-- [ ] `scripts/jobspy_search.py` + тесты (monkeypatch)
-- [ ] `searches.yaml` (сид из проверенных запросов) + `run.py` (второй цикл, `--linkedin`, expiry) + `query_common.derive_tier` + тесты
-- [ ] живой смок: `python3 scripts/run.py` (без `--linkedin`), затем разово с `--linkedin`; проверка карточек в Streamlit
-- [ ] обновить `docs/BACKLOG.md` (статус п.1) и `orgs.yaml`-комментарий (примечание о второй семье)
+- [x] store: `_ensure_dedup_key_column`, `upsert_search_postings`, `expire_stale_search_postings` + тесты
+- [x] `scripts/himalayas.py` + живая сверка имён полей + фикстуры + тесты
+- [x] `scripts/adzuna.py` + `.env`-парсер (`_load_env_credentials`) + живая сверка `redirect_url` + тесты
+- [x] `scripts/jobspy_search.py` + тесты (monkeypatch на `scrape_jobs`)
+- [x] `searches.yaml` + `run.py` (второй цикл, `--linkedin`, expiry) + `query_common.derive_tier` + тесты
+- [x] живой смок: оба режима без ошибок, 30→200 вакансий, идемпотентность и кросс-source дедуп подтверждены
+- [x] `docs/BACKLOG.md` и `orgs.yaml` обновлены
+
+## Что разошлось с планом
+
+- **`_ensure_column` → `_ensure_dedup_key_column`** (`store.py:55`): имя специализировано под единственную колонку вместо параметризованного хелпера. При добавлении второй колонки (см. спек `triage-and-autonomy`) обобщить.
+- **`derive_tier` вынесен в отдельный `scripts/query_common.py`**, а не оставлен внутри `jobspy_search.py` — развилка §4 разрешена в пользу отдельного модуля.
+- **LinkedIn выведен из-под `manual: true`** решением от того же дня (`4685470`) — §5 и раздел «Design rationale» ниже описывают состояние на момент планирования; актуальное обоснование и замеры в `docs/BACKLOG.md`.
+- **Предсказанное следствие сбылось:** мультиселект Organization в `app.py` разросся до 133 организаций (§5 фиксировал это как приемлемое для v1). Разбирается в спеке `triage-and-autonomy` — не сворачиванием списка, а ранжированием по релевантности.
 
 ## Вне скоупа
 
