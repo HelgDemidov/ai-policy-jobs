@@ -5,9 +5,14 @@ Two separate fetch functions, not one parameterized by site, so each gets
 its own `source` value in the DB — LinkedIn and Indeed have very different
 reliability/relevance profiles in live testing (see
 docs/job-aggregator-landscape.md): LinkedIn found the single best match of
-any source tested (RAND Europe), but LinkedIn scraping sits in a ToS grey
-area and rate-limits aggressively per IP — that's why it's the one search
-source gated behind the `--linkedin` CLI flag in run.py, not run by default.
+any source tested (RAND Europe).
+
+LinkedIn was gated behind run.py's `--linkedin` flag until 2026-07-25 over
+ToS/rate-limit concerns, then un-gated: the call is unauthenticated (no
+account of ours is involved — a rate limit costs us an empty result set for
+that run, not a ban) and `linkedin_fetch_description` defaults to False, so
+one run is ~2-3 requests. The real cost knob is `fetch_description: true` in
+searches.yaml — it issues one request PER POSTING (~20x a run). Leave it off.
 
 Query lesson from live testing: Indeed does broad OR-of-words matching on
 an unquoted search_term — use quoted phrases in searches.yaml

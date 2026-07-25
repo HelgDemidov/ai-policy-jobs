@@ -12,8 +12,8 @@ cd ~/Рабочий\ стол/job-search && claude
 ## Запуск
 
 ```bash
-.venv/bin/python scripts/run.py            # синхронизация: все ATS + все search-источники, КРОМЕ LinkedIn
-.venv/bin/python scripts/run.py --linkedin  # то же + LinkedIn (рейт-лимит/ToS-риск — запускать осознанно, не в cron)
+.venv/bin/python scripts/run.py            # синхронизация: все ATS + все search-источники, включая LinkedIn
+.venv/bin/python scripts/run.py --linkedin  # то же (флаг включает спеки с manual: true — сейчас таких нет)
 .venv/bin/streamlit run app.py              # UI на localhost:8501
 .venv/bin/pytest                            # тесты (77+, герметично)
 ```

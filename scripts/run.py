@@ -4,8 +4,9 @@ and upsert into the local SQLite store. One entry's failure doesn't stop the
 rest of its batch (either family).
 
 Usage: python3 scripts/run.py [--linkedin]
---linkedin also runs `manual: true` search specs (currently just LinkedIn —
-rate-limit/ToS-risky, so it's opt-in rather than part of the default run).
+--linkedin also runs `manual: true` search specs. As of 2026-07-25 no spec is
+marked manual (LinkedIn was un-gated — see docs/BACKLOG.md), so the flag is a
+no-op; the mechanism is kept for gating a future source.
 """
 import argparse
 import sys
@@ -99,7 +100,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--linkedin", action="store_true",
-        help="also run manual:true search specs (currently just LinkedIn — rate-limit/ToS-risky, opt-in)",
+        help="also run manual:true search specs (no spec is marked manual right now — kept for future gating)",
     )
     args = parser.parse_args()
     main(run_linkedin=args.linkedin)

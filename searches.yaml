@@ -1,10 +1,13 @@
 # Query-centric search specs — organizations and postings come from the data
 # itself, not a pre-known org list (contrast with orgs.yaml).
 #
-# `manual: true` — only runs with `python3 scripts/run.py --linkedin` (currently
-# only LinkedIn, since it's the one rate-limit/ToS-risky source — see
-# docs/tech_specs/query-connectors/spec.md and docs/job-aggregator-landscape.md
-# for why).
+# `manual: true` — spec runs only with `scripts/run.py --linkedin`. The mechanism
+# is live but currently unused: LinkedIn was gated this way until 2026-07-25, then
+# un-gated once it turned out to cost ~2-3 requests per run (unauthenticated
+# search, `linkedin_fetch_description` off) while being the highest-precision
+# source. Do NOT set `fetch_description: true` on the LinkedIn spec — that adds
+# one request per posting (~20x per run) and is where the rate-limit risk actually
+# lives. See docs/BACKLOG.md and docs/job-aggregator-landscape.md.
 #
 # Query phrasing is NOT interchangeable across sources — what works on one
 # (e.g. Adzuna's `think tank`) may be noise on another. See
@@ -33,7 +36,6 @@
   source: jobspy_linkedin
   query: AI policy analyst
   location: United Kingdom
-  manual: true
 
 - id: jobspy-indeed-uk
   source: jobspy_indeed
