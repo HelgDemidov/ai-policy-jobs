@@ -37,19 +37,29 @@ MVP-скрипт, собирающий текущие вакансии орга�
 scripts/lever.py       — коннектор Lever (api.lever.co/v0/postings/<slug>?mode=json)
 scripts/greenhouse.py  — коннектор Greenhouse (boards-api.greenhouse.io/v1/boards/<slug>/jobs)
 scripts/personio.py    — коннектор Personio (<slug>.jobs.personio.com/xml)
-scripts/store.py       — SQLite-схема + upsert с реконсиляцией (см. ниже)
-scripts/run.py         — оркестратор: читает orgs.yaml, гоняет коннекторы, апсертит, печатает сводку
-orgs.yaml              — конфиг организаций: {org, tier, ats, slug}
+scripts/himalayas.py   — query-centric коннектор Himalayas (/jobs/api/search?q=)
+scripts/adzuna.py      — query-centric коннектор Adzuna (what_phrase/what + country)
+scripts/jobspy_search.py — query-centric обёртка над python-jobspy (LinkedIn/Indeed)
+scripts/query_common.py — derive_tier: тир-эвристика для query-centric находок
+scripts/store.py       — SQLite-схема + upsert (ATS-семья с реконсиляцией + search-семья без неё, см. ниже)
+scripts/run.py         — оркестратор: ATS-цикл (orgs.yaml) + search-цикл (searches.yaml), --linkedin
+orgs.yaml              — конфиг организаций для ATS-коннекторов: {org, tier, ats, slug}
+searches.yaml          — конфиг поисковых запросов для query-centric коннекторов: {id, source, query/phrase, ...}
 data/jobs.db           — SQLite-хранилище (gitignored, генерируется)
 ```
 
-Запуск: `python3 scripts/run.py` из корня папки (зависимости — `requests`+`PyYAML`, оба уже стоят системно; полный набор зависимостей репо также продублирован в `.venv`, см. «Тестовое покрытие» ниже).
+**Запуск изменился:** `.venv/bin/python scripts/run.py [--linkedin]` — БОЛЬШЕ НЕ `python3 scripts/run.py` напрямую. С добавлением query-centric коннекторов (`python-jobspy`/`pandas` как жёсткие зависимости `run.py`) системный `python3` (только `requests`+`PyYAML`) перестал быть достаточным — эти пакеты стоят только в `.venv`. Обновить, если где-то в мышечной памяти/алиасах осталась старая команда.
 
-**Архитектура (сознательно зеркалит паттерны G2AI-пайплайна):** коннектор — чистая функция `fetch(slug) -> list[dict]`, сама не пишет в store (как `Connector`-протокол в `discovery/`); оркестратор изолирует отказ одной организации от остального батча (как `run_pipeline.process_docs`); `store.upsert_postings` — реконсиляция по факту повторного фетча, а не по накопленным допущениям: вакансия, пропавшая из ответа API, помечается `likely_closed`, НО только если она ещё в статусе `new` — раз выставленный вручную статус (`applied`/`rejected`) реконсиляцией никогда не перезаписывается. Идемпотентность подтверждена живым повторным прогоном.
+**Архитектура (сознательно зеркалит паттерны G2AI-пайплайна):** коннектор — чистая функция `fetch(slug|spec) -> list[dict]`, сама не пишет в store (как `Connector`-протокол в `discovery/`); оркестратор изолирует отказ одной организации/поиска от остального батча (как `run_pipeline.process_docs`). Два семейства хранения с разной семантикой (детали и спек — `docs/tech_specs/query-connectors/spec.md`):
+- **ATS-семья** (`upsert_postings`, orgs.yaml) — полный листинг организации на каждый фетч, поэтому реконсиляция в `likely_closed` надёжна: вакансия, пропавшая из ответа, помечается закрытой, НО только если ещё в статусе `new`.
+- **Search-семья** (`upsert_search_postings`, searches.yaml) — поисковая выдача — окно, не полный листинг, поэтому реконсиляции НЕТ; вместо неё — `expire_stale_search_postings` (age-based, по умолчанию 45 дней).
+- **Кросс-семейный дедуп** — `dedup_key` (нормализованный `org+title`) на каждой INSERT: находка одной и той же вакансии из другого источника не дублируется, а трогает `last_seen` существующей строки. Живьём подтверждено: LinkedIn-находка RAND Europe корректно не задублировала уже существующую ATS-запись той же организации там, где совпадение было точным.
 
-**Схема `postings`:** org, tier, source (lever/greenhouse/personio), ats_id, title, location, workplace_type (у Lever это отдельное поле API — `remote`/`onsite`/`hybrid`, надёжнее парсинга текста локации), team, commitment, url, description (plain text, для будущего LLM-анализа), posted_at, first_seen, last_seen, status (new/likely_closed/reviewed/applied/rejected — статус после `new` меняется только вручную).
+**Схема `postings`:** org, tier, source (lever/greenhouse/personio/himalayas/adzuna/jobspy_linkedin/jobspy_indeed), ats_id, title, location, workplace_type, team, commitment, url, description, posted_at, first_seen, last_seen, status, dedup_key. Тир для search-семьи — не берётся из конфига (там его нет), а вычисляется `query_common.derive_tier(source, spec, posting)`: himalayas→A всегда (remote-only борд), adzuna→по коду страны спека, jobspy→по `workplace_type` (remote→A) иначе по location спека (не вакансии — она ненадёжна, живой пример «London & San Francisco»).
 
-**Текущее состояние (2026-07-25):** 5 организаций подключено — Epoch AI (8 вакансий), Apollo Research (11), Future of Life Institute (9), Center for AI Safety (0 — подтверждено, что реально пусто), European Council on Foreign Relations (2). 30 вакансий в базе.
+**LinkedIn — по флагу `--linkedin`, не в дефолтном прогоне** (решение куратора) — самый рейт-лимит-хрупкий/ToS-рискованный источник из всех, риск бьёт по домашнему LTE-IP куратора.
+
+**Текущее состояние (2026-07-25, после живого смок-теста query-connectors):** 200 вакансий в базе (было 30 до реализации спека). По источникам: lever 28, personio 2, himalayas 82, adzuna 55, jobspy_indeed 18, jobspy_linkedin 15. Оба прогона (без и с `--linkedin`) прошли без ошибок; повторный прогон дал 0 new по всем уже опрошенным источникам (идемпотентность подтверждена); дедуп реально сработал на практике (не все "found" стали "new" — часть съел кросс-source/повторный дедуп).
 
 ## Интерфейс просмотра вакансий (реализован 2026-07-24)
 
@@ -61,14 +71,17 @@ Streamlit-приложение `app.py` — карточный вид `data/jobs
 
 **Тема — светлая/тёмная, переключается через нативное меню Streamlit (☰ → System/Light/Dark)** — своей кнопки-тумблера на странице нет, т.к. публичного API «программно переключить активную тему» у Streamlit не существует (только чтение через `st.context.theme.type`, не запись); переключатель в системном меню — единственный официальный механизм. Тёмная тема — не дефолтный серый, а кастомная «глубокая летняя ночь» (индиго-фон `#1b1533`, тёплый кремовый текст, янтарный акцент `#f2b84b`) — задаётся через `.streamlit/config.toml` секциями `[theme.light]`/`[theme.dark]` (НЕ через голый `[theme]` с одним `primaryColor` — так Streamlit молча форсит `base="light"` и отключает системное определение, живая ошибка первого захода). Кастомные CSS-цвета карточек/чипов синхронизированы с реальной активной темой через `st.context.theme.type` в Python, а не через `prefers-color-scheme`-медиазапрос — визуально подтверждено эмпирически (DevTools), что Streamlit НЕ прокидывает `--st-*`-переменные темы в обычный `st.markdown`-HTML (это документировано только для новых iframe-based Components v2). Оба состояния (light/dark) визуально проверены живым запуском + скриншотом через chrome-devtools.
 
-## Тестовое покрытие (реализовано 2026-07-25)
+## Тестовое покрытие (реализовано 2026-07-25, дополнено при реализации query-connectors)
 
-26 тестов в `tests/` (`pytest`), полностью герметичны — ни один не трогает боевую `data/jobs.db` (проверено живым замером). Запуск: `.venv/bin/pytest` (или `.venv/bin/python -m pytest`) из корня.
+77 тестов в `tests/` (`pytest`), полностью герметичны — ни один не трогает боевую `data/jobs.db` (проверено живым замером до/после каждого коммита). Запуск: `.venv/bin/pytest` (или `.venv/bin/python -m pytest`) из корня.
 
-- `test_lever.py` / `test_greenhouse.py` / `test_personio.py` — HTTP замокан через `requests_mock`, проверяют парсинг реального формата ответа (структура подтверждена живым запросом к API при разработке коннекторов), сборку `description` из нескольких полей + HTML-strip, обработку отсутствующих полей.
-- `test_store.py` — вся реконсиляционная логика: insert/idempotent-rerun/update-with-first_seen-preserved/`likely_closed`-пометка только для статуса `new`/скоуп по org+source.
-- `test_run.py` — оркестратор: успешный мультиорг-прогон, изоляция отказа одной организации от остального батча, идемпотентность повторного `main()`.
+- `test_lever.py` / `test_greenhouse.py` / `test_personio.py` / `test_himalayas.py` / `test_adzuna.py` / `test_jobspy_search.py` — HTTP замокан (`requests_mock` или монкипатч `scrape_jobs`), проверяют парсинг реального формата ответа (структура ВСЕХ коннекторов подтверждена живым запросом при разработке — включая ловушку NaN-truthy у jobspy: `bool(float('nan'))` даёт `True` в Python, наивный `if row['is_remote']` пометил бы отсутствующее значение как remote).
+- `test_store.py` — реконсиляционная логика ATS-семьи (insert/idempotent-rerun/likely_closed только для `new`/скоуп по org+source) + search-семьи (dedup_key backfill на legacy-строках, кросс-source дедуп, отсутствие реконсиляции, age-based expire со скоупом по источникам).
+- `test_query_common.py` — таблица случаев `derive_tier` по каждому источнику.
+- `test_run.py` — оба цикла (ATS + search), изоляция отказов в обоих, `--linkedin` вкл/выкл (manual-спеки), идемпотентность.
 - `test_app.py` — через `streamlit.testing.v1.AppTest` (headless, без браузера): загрузка карточек, фильтр по organization, запись статуса обратно в БД через селектбокс, чекбокс скрытия закрытых/отклонённых, пустая БД → инфо-сообщение вместо краша.
+
+**Критичный урок при добавлении search-цикла:** `run.main()` по умолчанию резолвит `searches_path` на РЕАЛЬНЫЙ `searches.yaml` в корне — все существующие ATS-тесты пришлось обновить передавать заведомо несуществующий `searches_path`, иначе они начали бы тихо дёргать настоящие Himalayas/Adzuna/JobSpy при каждом прогоне pytest (поймано и исправлено до коммита, не постфактум).
 
 **Рефакторинг под тестируемость (без изменения поведения по умолчанию):** `store.open_db(path=None)` и `run.main(orgs_path=None, db_path=None)` — теперь принимают опциональные пути вместо жёстко зашитых констант; CLI-вызов без аргументов ведёт себя идентично прежнему.
 
@@ -84,13 +97,14 @@ Streamlit-приложение `app.py` — карточный вид `data/jobs
 
 По итогам направления 1 обновили знания на примере методологии Luke Barousse и аналогичных pet-проектов мониторинга вакансий (июль 2026). Ключевой вывод: наш подход был **org-centric** (знаем организацию → ищем её ATS), а более высокоуровневый метод — **query-centric** (ищем по ключевому слову через агрегатор, который сам находит организации и вакансии разом, независимо от их ATS). Конкретные находки: JobSpy (бесплатная Python-библиотека, агрегирует LinkedIn/Indeed/Glassdoor/Google/ZipRecruiter одним вызовом), RemoteOK/Himalayas/We Work Remotely (бесплатные API/RSS для remote-вакансий, готовая фильтрация под Tier A), Adzuna (бесплатный тариф, сильный охват UK/EU под Tier B, топикал-покрытие не проверено). Это меняет приоритет: интеграция query-centric источника ценнее, чем продолжение org-by-org поиска.
 
-## Следующие шаги (приоритет обновлён 2026-07-25)
+## Следующие шаги (приоритет обновлён 2026-07-25, п.1 реализован)
 
-1. **Интеграция query-centric агрегатора (новое, высокий приоритет)** — коннектор `fetch(search_term, location) -> list[dict]` поверх JobSpy и/или RemoteOK/Himalayas API, вместо/в дополнение к org-by-org поиску. См. `job-aggregator-landscape.md` за деталями и обоснованием приоритета. → **Спек готов: `docs/tech_specs/query-connectors/spec.md` (черновик v1, 2026-07-25)** — Himalayas+Adzuna+JobSpy, LinkedIn по флагу `--linkedin`, тир-эвристика, дедуп-ключ, age-based expiry вместо реконсиляции.
+1. ~~Интеграция query-centric агрегатора~~ — **РЕАЛИЗОВАНО** (ветка `feature/query-connectors`, спек `docs/tech_specs/query-connectors/spec.md`): Himalayas + Adzuna + JobSpy (LinkedIn/Indeed), тир-эвристика, дедуп-ключ, age-based expiry. Живой смок-тест: 30→200 вакансий, оба режима (с/без `--linkedin`) без ошибок, идемпотентность и дедуп подтверждены на практике.
 2. Коннектор для организаций без публичного ATS-API — обычный HTML-скрейп карьерной страницы (паттерн `trafilatura` из G2AI `convert/converters.py`) — для конкретных организаций из шортлиста, если query-centric поиск их не покрывает.
-3. Стадия анализа/отклика: прогон новых вакансий через LLM на соответствие критериям (тиры/язык/роль) + черновик отклика. Кандидат на реализацию — `core/openrouter.py` из G2AI (retry/backoff, обработка ошибок-в-теле-200) как основа клиента.
-4. Донабор организаций в `orgs.yaml` по мере нахождения их реального ATS-слага (низкий приоритет после вывода направления 1 — см. выше).
-5. ~~Систематический проход по кураторским агрегаторам (Global Go To Think Tank Index, 80 000 Hours, EA Forum, EUjobs.co, On Think Tanks)~~ — понижен в приоритете: query-centric агрегаторы (пункт 1) дают то же самое (новые организации) плюс сами вакансии, живьём и непрерывно.
+3. Стадия анализа/отклика: прогон новых вакансий через LLM на соответствие критериям (тиры/язык/роль) + черновик отклика. Кандидат на реализацию — `core/openrouter.py` из G2AI (retry/backoff, обработка ошибок-в-теле-200) как основа клиента. С 200 вакансиями в базе (вместо 30) ценность этого шага выросла — ручной просмотр уже ощутимо тяжелее.
+4. Донабор организаций в `orgs.yaml` по мере нахождения их реального ATS-слага (низкий приоритет после вывода направления 1).
+5. Донабор поисковых запросов в `searches.yaml` — текущие 6 не претендуют на полноту, только на проверенность (см. `job-aggregator-landscape.md`).
+6. ~~Систематический проход по кураторским агрегаторам (Global Go To Think Tank Index, 80 000 Hours, EA Forum, EUjobs.co, On Think Tanks)~~ — понижен в приоритете: query-centric агрегаторы (п.1, уже реализован) дают то же самое (новые организации) плюс сами вакансии, живьём и непрерывно.
 
 ## Отклонено / выпало из скоупа (не путать с "ещё не проверено")
 
