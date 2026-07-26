@@ -17,6 +17,12 @@ import store
 APP_PATH = str(Path(__file__).resolve().parent.parent / "app.py")
 
 
+def _vacancy_counter_text(at):
+    # Match the rendered <span>, not the injected <style> block that also
+    # mentions the class name in its own CSS rule.
+    return next(md.value for md in at.markdown if 'class="vacancy-counter"' in md.value)
+
+
 def _seed_two_orgs(db_path):
     conn = store.open_db(db_path)
     store.upsert_postings(
@@ -69,8 +75,11 @@ def test_app_loads_and_shows_seeded_postings(tmp_path, monkeypatch):
     at.run(timeout=15)
 
     assert not at.exception
-    assert at.title[0].value == "🧭 Job Search Tracker"
-    assert at.caption[0].value == "2 of 2 tracked posting(s)"
+    # The compass emoji title became a custom <h1> + inline SVG logo (a
+    # monochrome transformer-block icon), so it's an st.markdown element now,
+    # not an st.title one — at.title is empty.
+    assert any("AI Policy Job Tracker" in md.value for md in at.markdown if "<h1" in md.value)
+    assert "Current vacancies: 2" in _vacancy_counter_text(at)
 
     card_titles = [md.value for md in at.markdown if 'class="card-title"' in md.value]
     assert any("Policy Analyst" in t for t in card_titles)
@@ -100,7 +109,7 @@ def test_organization_filter_narrows_visible_postings(tmp_path, monkeypatch):
     org_filter.set_value(["Acme"]).run(timeout=15)
 
     assert not at.exception
-    assert at.caption[0].value == "1 of 2 tracked posting(s)"
+    assert "Current vacancies: 1" in _vacancy_counter_text(at)
     card_titles = [md.value for md in at.markdown if 'class="card-title"' in md.value]
     assert any("Policy Analyst" in t for t in card_titles)
     assert not any("Senior Researcher" in t for t in card_titles)
@@ -124,6 +133,114 @@ def test_changing_status_writes_back_to_the_database(tmp_path, monkeypatch):
     assert status == "applied"
 
 
+def test_tier_filter_narrows_visible_postings(tmp_path, monkeypatch):
+    db_path = tmp_path / "jobs.db"
+    _seed_two_orgs(db_path)
+    monkeypatch.setattr(store, "DB_PATH", db_path)
+
+    at = AppTest.from_file(APP_PATH)
+    at.run(timeout=15)
+
+    tier_filter = next(ms for ms in at.multiselect if ms.label == "Tier")
+    tier_filter.set_value(["A"]).run(timeout=15)
+
+    assert not at.exception
+    assert "Current vacancies: 1" in _vacancy_counter_text(at)
+    card_titles = [md.value for md in at.markdown if 'class="card-title"' in md.value]
+    assert any("Policy Analyst" in t for t in card_titles)
+    assert not any("Senior Researcher" in t for t in card_titles)
+
+
+def test_search_filters_by_title_or_description(tmp_path, monkeypatch):
+    db_path = tmp_path / "jobs.db"
+    _seed_two_orgs(db_path)
+    monkeypatch.setattr(store, "DB_PATH", db_path)
+
+    at = AppTest.from_file(APP_PATH)
+    at.run(timeout=15)
+
+    at.text_input[0].set_value("Senior").run(timeout=15)
+
+    assert not at.exception
+    assert "Current vacancies: 1" in _vacancy_counter_text(at)
+    card_titles = [md.value for md in at.markdown if 'class="card-title"' in md.value]
+    assert any("Senior Researcher" in t for t in card_titles)
+    assert not any("Policy Analyst" in t for t in card_titles)
+
+
+def test_tier_badge_uses_a_distinct_css_class_per_tier(tmp_path, monkeypatch):
+    # Regression test for TIER_CSS_CLASS: A/B/C used to share one "tier" class
+    # (and therefore one color) — this pins each tier to its OWN class so a
+    # future edit can't silently collapse them back into a single color.
+    db_path = tmp_path / "jobs.db"
+    _seed_two_orgs(db_path)
+    monkeypatch.setattr(store, "DB_PATH", db_path)
+
+    at = AppTest.from_file(APP_PATH)
+    at.run(timeout=15)
+
+    assert not at.exception
+    chip_markdown = [md.value for md in at.markdown if "card-chip" in md.value and "Tier" in md.value]
+    assert any('class="card-chip tier-a">Tier A' in c for c in chip_markdown)
+    assert any('class="card-chip tier-b">Tier B' in c for c in chip_markdown)
+
+
+def test_only_remote_checkbox_filters_to_remote_postings(tmp_path, monkeypatch):
+    db_path = tmp_path / "jobs.db"
+    _seed_two_orgs(db_path)  # Acme is remote, Beta is onsite
+    monkeypatch.setattr(store, "DB_PATH", db_path)
+
+    at = AppTest.from_file(APP_PATH)
+    at.run(timeout=15)
+
+    remote_checkbox = next(cb for cb in at.checkbox if cb.label == "Only remote")
+    remote_checkbox.check().run(timeout=15)
+
+    assert not at.exception
+    assert "Current vacancies: 1" in _vacancy_counter_text(at)
+    card_titles = [md.value for md in at.markdown if 'class="card-title"' in md.value]
+    assert any("Policy Analyst" in t for t in card_titles)
+    assert not any("Senior Researcher" in t for t in card_titles)
+
+
+def test_only_remote_checkbox_treats_missing_workplace_type_as_not_remote(tmp_path, monkeypatch):
+    # ~87 of 200 rows in the real database have no workplace_type at all
+    # (query-centric sources don't always report it) — this is the realistic
+    # failure mode for the filter, not a contrived edge case.
+    db_path = tmp_path / "jobs.db"
+    conn = store.open_db(db_path)
+    store.upsert_postings(
+        conn,
+        "Gamma",
+        "A",
+        "lever",
+        [
+            {
+                "ats_id": "3",
+                "title": "Mystery Role",
+                "location": None,
+                "workplace_type": None,
+                "team": None,
+                "commitment": None,
+                "url": "https://example.com/3",
+                "description": "",
+                "posted_at": "2024-01-03",
+            }
+        ],
+    )
+    conn.close()
+    monkeypatch.setattr(store, "DB_PATH", db_path)
+
+    at = AppTest.from_file(APP_PATH)
+    at.run(timeout=15)
+
+    remote_checkbox = next(cb for cb in at.checkbox if cb.label == "Only remote")
+    remote_checkbox.check().run(timeout=15)
+
+    assert not at.exception
+    assert "Current vacancies: 0" in _vacancy_counter_text(at)
+
+
 def test_hide_closed_checkbox_excludes_rejected_postings(tmp_path, monkeypatch):
     db_path = tmp_path / "jobs.db"
     _seed_two_orgs(db_path)
@@ -136,9 +253,9 @@ def test_hide_closed_checkbox_excludes_rejected_postings(tmp_path, monkeypatch):
     at = AppTest.from_file(APP_PATH)
     at.run(timeout=15)
 
-    assert at.caption[0].value == "1 of 2 tracked posting(s)"  # Beta hidden by default
+    assert "Current vacancies: 1" in _vacancy_counter_text(at)  # Beta hidden by default
 
     hide_checkbox = at.checkbox[0]
     hide_checkbox.uncheck().run(timeout=15)
 
-    assert at.caption[0].value == "2 of 2 tracked posting(s)"  # now shown
+    assert "Current vacancies: 2" in _vacancy_counter_text(at)  # now shown

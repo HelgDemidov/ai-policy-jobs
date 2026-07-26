@@ -1,9 +1,23 @@
+[client]
+# "viewer" drops Deploy/Rerun/Clear-cache from Streamlit's own toolbar+menu —
+# all three are either superseded by our own header controls or dev-only
+# noise for a single-user local tool. Confirmed via the bundled frontend
+# source (not a live click-test): the same flag that hides those menu items
+# also gates their global keyboard shortcuts ('r', 'c') — which is what was
+# hijacking Ctrl+C into a "clear cache?" prompt instead of copying text.
+toolbarMode = "viewer"
+
 [theme.light]
 primaryColor = "#1E88E5"
 
 [theme.dark]
-# "Deep summer night" — warm indigo sky + firefly-gold accent, not the generic gray dark theme.
-backgroundColor = "#1b1533"
-secondaryBackgroundColor = "#271f4a"
+# "Deep summer night" — deep navy sky + light firefly-lime accent (softened from
+# gold so text/icons drawn on top of it stay legible), not the generic gray dark theme.
+# Background history: midpoint between the navy fix (#0f1f3d) and the original
+# deep-indigo (#1b1533) it replaced, darkened 15% (#121630) — then darkened
+# another 15% on top (uniform RGB scaling, so hue/saturation — the blue/indigo
+# balance — is preserved exactly, only lightness drops).
+backgroundColor = "#0f1329"
+secondaryBackgroundColor = "#161a36"
 textColor = "#f3ecd9"
-primaryColor = "#f2b84b"
+primaryColor = "#c0e86e"
