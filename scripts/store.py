@@ -119,10 +119,28 @@ def upsert_postings(conn: sqlite3.Connection, org: str, tier: str | None, source
             (org, source, *seen_ids),
         )
     else:
-        conn.execute(
-            "UPDATE postings SET status='likely_closed' WHERE org=? AND source=? AND status='new'",
-            (org, source),
-        )
+        # An empty response is only a trustworthy "org closed everything"
+        # signal if we've never had a reason to doubt it. Under a daily
+        # unattended timer, a renamed ATS slug or a connector parsing a
+        # changed response shape ALSO looks like "zero postings" — and would
+        # otherwise silently mass-close every known posting for this org on
+        # the first bad run. If we already know about postings here, treat
+        # the empty response as suspicious and skip reconciliation instead of
+        # trusting it; a genuinely empty org (no history at all) has nothing
+        # to wrongly close, so that case is left as a no-op UPDATE below.
+        known = conn.execute(
+            "SELECT COUNT(*) FROM postings WHERE org=? AND source=?", (org, source)
+        ).fetchone()[0]
+        if known:
+            print(
+                f"  ! {org} ({source}): empty response but {known} known posting(s) on file — "
+                "skipping reconciliation (looks like a broken fetch, not a real closure)"
+            )
+        else:
+            conn.execute(
+                "UPDATE postings SET status='likely_closed' WHERE org=? AND source=? AND status='new'",
+                (org, source),
+            )
     conn.commit()
     return new_count
 
