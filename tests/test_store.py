@@ -76,12 +76,16 @@ def test_changed_fields_refresh_but_first_seen_is_preserved(tmp_path):
 
 def test_disappearing_posting_is_marked_likely_closed(tmp_path):
     conn = store.open_db(tmp_path / "jobs.db")
+    store.upsert_postings(conn, "Acme", "A", "lever", [_posting("1"), _posting("2")])
+
+    # "2" is gone from the next fetch, but the response isn't empty — "1" is
+    # still there — so this is a normal, trustworthy partial reconciliation
+    # (see the empty-response tests below for the *untrustworthy* case).
     store.upsert_postings(conn, "Acme", "A", "lever", [_posting("1")])
 
-    store.upsert_postings(conn, "Acme", "A", "lever", [])  # posting no longer in the ATS response
-
-    status = conn.execute("SELECT status FROM postings WHERE ats_id='1'").fetchone()[0]
-    assert status == "likely_closed"
+    statuses = dict(conn.execute("SELECT ats_id, status FROM postings").fetchall())
+    assert statuses["1"] == "new"
+    assert statuses["2"] == "likely_closed"
 
 
 def test_manually_set_status_is_never_overwritten_by_reconciliation(tmp_path):
@@ -90,26 +94,72 @@ def test_manually_set_status_is_never_overwritten_by_reconciliation(tmp_path):
     conn.execute("UPDATE postings SET status='applied' WHERE ats_id='2'")
     conn.commit()
 
-    # Next fetch no longer returns either posting.
-    store.upsert_postings(conn, "Acme", "A", "lever", [])
+    # Next fetch no longer returns either "1" or "2", but does return a new
+    # posting "3" — a non-empty response, so reconciliation is trusted.
+    store.upsert_postings(conn, "Acme", "A", "lever", [_posting("3")])
 
     statuses = dict(conn.execute("SELECT ats_id, status FROM postings").fetchall())
     assert statuses["1"] == "likely_closed"  # was 'new' -> reconciled
     assert statuses["2"] == "applied"  # manual status untouched
+    assert statuses["3"] == "new"
 
 
 def test_reconciliation_is_scoped_to_org_and_source(tmp_path):
     conn = store.open_db(tmp_path / "jobs.db")
-    store.upsert_postings(conn, "Acme", "A", "lever", [_posting("1")])
-    store.upsert_postings(conn, "Beta", "B", "lever", [_posting("2")])
+    store.upsert_postings(conn, "Acme", "A", "lever", [_posting("1"), _posting("2")])
+    store.upsert_postings(conn, "Beta", "B", "lever", [_posting("3")])
 
-    # Acme's fetch comes back empty; Beta's posting must be unaffected.
+    # Acme's fetch drops "2" but still returns "1"; Beta must be unaffected.
+    store.upsert_postings(conn, "Acme", "A", "lever", [_posting("1")])
+
+    acme_statuses = dict(
+        conn.execute("SELECT ats_id, status FROM postings WHERE org='Acme'").fetchall()
+    )
+    beta_status = conn.execute("SELECT status FROM postings WHERE org='Beta'").fetchone()[0]
+    assert acme_statuses == {"1": "new", "2": "likely_closed"}
+    assert beta_status == "new"
+
+
+# --- empty-response guard (added alongside the systemd daily timer: an ---
+# --- unattended run can no longer have a human notice "that looks wrong") -
+
+
+def test_empty_response_with_no_history_is_a_harmless_noop(tmp_path):
+    conn = store.open_db(tmp_path / "jobs.db")
+
+    new_count = store.upsert_postings(conn, "Acme", "A", "lever", [])
+
+    assert new_count == 0
+    assert conn.execute("SELECT COUNT(*) FROM postings").fetchone()[0] == 0
+
+
+def test_empty_response_with_existing_history_skips_reconciliation(tmp_path, capsys):
+    conn = store.open_db(tmp_path / "jobs.db")
+    store.upsert_postings(conn, "Acme", "A", "lever", [_posting("1")])
+
+    # A renamed slug or a changed response shape looks exactly like this to
+    # the connector — a real closure must not be inferred from it alone.
     store.upsert_postings(conn, "Acme", "A", "lever", [])
 
+    status = conn.execute("SELECT status FROM postings WHERE ats_id='1'").fetchone()[0]
+    assert status == "new"  # NOT reconciled — the empty response is not trusted
+    captured = capsys.readouterr()
+    assert "Acme" in captured.out
+    assert "skipping reconciliation" in captured.out
+
+
+def test_empty_response_guard_is_scoped_to_org_and_source(tmp_path):
+    conn = store.open_db(tmp_path / "jobs.db")
+    store.upsert_postings(conn, "Acme", "A", "lever", [_posting("1")])
+
+    # Beta has no history at all for (Beta, lever) — its empty response is
+    # the harmless-noop case, not the guarded one, and must not affect Acme.
+    store.upsert_postings(conn, "Beta", "B", "lever", [])
+
     acme_status = conn.execute("SELECT status FROM postings WHERE org='Acme'").fetchone()[0]
-    beta_status = conn.execute("SELECT status FROM postings WHERE org='Beta'").fetchone()[0]
-    assert acme_status == "likely_closed"
-    assert beta_status == "new"
+    beta_count = conn.execute("SELECT COUNT(*) FROM postings WHERE org='Beta'").fetchone()[0]
+    assert acme_status == "new"
+    assert beta_count == 0
 
 
 # --- dedup_key migration + backfill ---------------------------------------

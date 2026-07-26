@@ -264,3 +264,69 @@ def test_expire_stale_runs_after_search_loop_and_is_scoped(tmp_path, monkeypatch
     conn = store.open_db(db_path)
     status = conn.execute("SELECT status FROM postings WHERE ats_id='l1'").fetchone()[0]
     assert status == "new"  # untouched — lever isn't a search-family source
+
+
+# --- exit code (added for the daily systemd timer — see spec §3: a scheduler
+# --- can't otherwise tell "everything broke" apart from "nothing new") ----
+
+
+def test_main_returns_1_when_every_attempted_source_fails(tmp_path, monkeypatch):
+    orgs_path = tmp_path / "orgs.yaml"
+    orgs_path.write_text(
+        yaml.safe_dump([{"org": "Broken", "tier": "A", "ats": "lever", "slug": "broken"}])
+    )
+    db_path = tmp_path / "jobs.db"
+    monkeypatch.setitem(run.CONNECTORS, "lever", lambda slug: (_ for _ in ()).throw(RuntimeError("boom")))
+
+    exit_code = run.main(orgs_path=orgs_path, db_path=db_path, searches_path=_no_searches_path(tmp_path))
+
+    assert exit_code == 1
+
+
+def test_main_returns_0_when_a_source_in_either_family_succeeds(tmp_path, monkeypatch):
+    # The org connector fails outright, but a search connector succeeds.
+    # Pins that "succeeded" is summed across BOTH families rather than
+    # checked per-family — a plausible bug that would wrongly report failure
+    # here even though real data landed this run.
+    orgs_path = tmp_path / "orgs.yaml"
+    orgs_path.write_text(
+        yaml.safe_dump([{"org": "Broken", "tier": "A", "ats": "lever", "slug": "broken"}])
+    )
+    searches_path = tmp_path / "searches.yaml"
+    searches_path.write_text(
+        yaml.safe_dump([{"id": "hima-policy", "source": "himalayas", "query": "policy"}])
+    )
+    db_path = tmp_path / "jobs.db"
+    monkeypatch.setitem(run.CONNECTORS, "lever", lambda slug: (_ for _ in ()).throw(RuntimeError("boom")))
+    monkeypatch.setitem(
+        run.SEARCH_CONNECTORS, "himalayas",
+        lambda spec: [_search_posting("h1", "R Street Institute", title="Policy Director")],
+    )
+
+    exit_code = run.main(orgs_path=orgs_path, db_path=db_path, searches_path=searches_path)
+
+    assert exit_code == 0
+
+
+def test_main_returns_0_when_config_is_completely_empty(tmp_path):
+    orgs_path = tmp_path / "orgs.yaml"
+    orgs_path.write_text("[]")
+    db_path = tmp_path / "jobs.db"
+
+    exit_code = run.main(orgs_path=orgs_path, db_path=db_path, searches_path=_no_searches_path(tmp_path))
+
+    assert exit_code == 0  # nothing attempted is not the same as everything failing
+
+
+def test_main_returns_0_when_only_manual_specs_exist_and_are_skipped(tmp_path):
+    # A manual-only searches.yaml without --linkedin is 0 attempted (all
+    # skipped) — same "no signal" case as an empty config, not a failure.
+    searches_path = tmp_path / "searches.yaml"
+    searches_path.write_text(
+        yaml.safe_dump([{"id": "li-search", "source": "jobspy_linkedin", "query": "x", "manual": True}])
+    )
+    db_path = tmp_path / "jobs.db"
+
+    exit_code = run.main(orgs_path=_empty_orgs_path(tmp_path), db_path=db_path, searches_path=searches_path)
+
+    assert exit_code == 0
