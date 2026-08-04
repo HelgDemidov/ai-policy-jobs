@@ -8,6 +8,13 @@ const TIER_CLASS = { A: "tier-a", B: "tier-b", C: "tier-c" };
 let knownTiers = null;
 let knownOrgs = null;
 
+// Full unfiltered dataset, fetched once (page load / "Refresh from DB").
+// All filter-widget changes re-filter this in memory instead of re-fetching
+// — live-measured 2026-08-04: server-side processing is ~0.15s, but the
+// per-request payload (full description text for every posting) took
+// 2-15s to transfer, and the old code re-fetched it on every filter click.
+let allPostings = [];
+
 function debounce(fn, delayMs) {
   let timer;
   return (...args) => {
@@ -40,26 +47,42 @@ function currentFilters() {
   return filters;
 }
 
-function buildQueryString(filters) {
-  const params = new URLSearchParams();
-  if (filters.tier) filters.tier.forEach((t) => params.append("tier", t));
-  if (filters.org) filters.org.forEach((o) => params.append("org", o));
-  params.set("hide_closed", String(filters.hide_closed));
-  params.set("remote_only", String(filters.remote_only));
-  if (filters.query) params.set("query", filters.query);
-  return params.toString();
-}
-
 class AuthRequiredError extends Error {}
 
-async function fetchPostings(filters) {
-  const resp = await fetch(`/api/postings?${buildQueryString(filters)}`);
+// Always fetches the complete table (hide_closed=false overrides the
+// server's default) — filtering happens client-side in applyFilters, so
+// this is the only network call any filter interaction needs.
+async function fetchAllPostings() {
+  const resp = await fetch("/api/postings?hide_closed=false");
   if (resp.status === 401) {
     showLoginOverlay();
     throw new AuthRequiredError();
   }
   if (!resp.ok) throw new Error(`GET /api/postings failed: ${resp.status}`);
   return resp.json();
+}
+
+// Mirrors web/api/_logic.py's list_postings filter logic 1:1, operating on
+// the already-fetched array instead of a SQL query.
+function applyFilters(postings, filters) {
+  let result = postings;
+  if (filters.tier) result = result.filter((p) => filters.tier.includes(p.tier));
+  if (filters.org) result = result.filter((p) => filters.org.includes(p.org));
+  if (filters.hide_closed) {
+    result = result.filter((p) => !["likely_closed", "rejected"].includes(p.status));
+  }
+  if (filters.remote_only) {
+    result = result.filter((p) => (p.workplace_type || "").toLowerCase() === "remote");
+  }
+  const query = (filters.query || "").trim().toLowerCase();
+  if (query) {
+    result = result.filter(
+      (p) =>
+        (p.title || "").toLowerCase().includes(query) ||
+        (p.description || "").toLowerCase().includes(query)
+    );
+  }
+  return result;
 }
 
 function populateTierFilter(postings) {
@@ -75,7 +98,7 @@ function populateTierFilter(postings) {
     input.type = "checkbox";
     input.value = tier;
     input.checked = true;
-    input.addEventListener("change", refresh);
+    input.addEventListener("change", renderFromCache);
     label.appendChild(input);
     label.append(` Tier ${tier}`);
     fieldset.appendChild(label);
@@ -204,11 +227,19 @@ async function updateStatus(posting, selectEl, newStatus) {
   }
 }
 
+// Re-filters the already-fetched dataset and re-renders — no network call.
+// Bound to every filter widget's change/input event.
+function renderFromCache() {
+  renderCards(applyFilters(allPostings, currentFilters()));
+}
+
+// The only function that hits the network. Runs on page load and on
+// "Refresh from DB" — everything else re-filters the cached result.
 async function refresh() {
-  const postings = await fetchPostings(currentFilters());
-  if (knownTiers === null) populateTierFilter(postings);
-  if (knownOrgs === null) populateOrgFilter(postings);
-  renderCards(postings);
+  allPostings = await fetchAllPostings();
+  if (knownTiers === null) populateTierFilter(allPostings);
+  if (knownOrgs === null) populateOrgFilter(allPostings);
+  renderFromCache();
   hideLoginOverlay();
 }
 
@@ -244,10 +275,10 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("refresh-btn").addEventListener("click", refresh);
-  document.getElementById("hide-closed").addEventListener("change", refresh);
-  document.getElementById("remote-only").addEventListener("change", refresh);
-  document.getElementById("org-filter").addEventListener("change", refresh);
-  document.getElementById("search-input").addEventListener("input", debounce(refresh, 300));
+  document.getElementById("hide-closed").addEventListener("change", renderFromCache);
+  document.getElementById("remote-only").addEventListener("change", renderFromCache);
+  document.getElementById("org-filter").addEventListener("change", renderFromCache);
+  document.getElementById("search-input").addEventListener("input", debounce(renderFromCache, 300));
 
   document.getElementById("login-form").addEventListener("submit", async (e) => {
     e.preventDefault();
