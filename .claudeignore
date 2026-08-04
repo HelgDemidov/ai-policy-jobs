@@ -1,0 +1,28 @@
+# Secrets — never read into context
+.env
+.env.local
+
+# Generated data (gitignored, can be large/binary)
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Python cache / bytecode
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Python / Node environments
+.venv/
+node_modules/
+
+# Deploy configs
+.vercel/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
