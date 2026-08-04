@@ -47,8 +47,7 @@ def test_upload_calls_correct_cli_flags(monkeypatch, tmp_path):
         "vercel", "blob", "put", str(src),
         "--access", "private",
         "--pathname", "jobs.db",
-        "--allow-overwrite", "true",
-        "--add-random-suffix", "false",
+        "--allow-overwrite",
     ]
 
 
