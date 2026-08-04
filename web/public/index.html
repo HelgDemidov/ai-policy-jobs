@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Policy Job Tracker</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <h1>
+    <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor"
+         stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="logo">
+      <rect x="7" y="16.5" width="10" height="4" rx="1"/>
+      <rect x="7" y="10" width="10" height="4" rx="1"/>
+      <rect x="7" y="3.5" width="10" height="4" rx="1"/>
+      <path d="M5 18.5h2M17 18.5h2M5 12h2M17 12h2M5 5.5h2M17 5.5h2"/>
+      <path d="M20 18.5c1.6 0 1.6-15 0-15" opacity="0.55"/>
+    </svg>
+    AI Policy Job Tracker
+  </h1>
+  <div class="topbar-actions">
+    <button id="refresh-btn" type="button" class="btn">Refresh from DB</button>
+    <select id="theme-select" class="theme-select" aria-label="Theme">
+      <option value="system">System</option>
+      <option value="light">Light</option>
+      <option value="dark">Dark</option>
+    </select>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <h2>Filters</h2>
+
+    <fieldset id="tier-filter">
+      <legend>Tier</legend>
+    </fieldset>
+
+    <fieldset>
+      <legend>Organization</legend>
+      <select id="org-filter" multiple size="8"></select>
+    </fieldset>
+
+    <label class="check-row">
+      <input type="checkbox" id="hide-closed" checked>
+      Hide likely_closed / rejected
+    </label>
+
+    <label class="check-row">
+      <input type="checkbox" id="remote-only">
+      Only remote
+    </label>
+
+    <label class="field-row">
+      Search title/description
+      <input type="text" id="search-input" placeholder="">
+    </label>
+  </aside>
+
+  <main>
+    <div class="counter-row">
+      <span class="vacancy-counter" id="vacancy-counter" role="status">Current vacancies: 0</span>
+    </div>
+    <div id="card-grid" class="card-grid"></div>
+    <p id="empty-message" class="empty-message" hidden>No postings match the current filters.</p>
+  </main>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
