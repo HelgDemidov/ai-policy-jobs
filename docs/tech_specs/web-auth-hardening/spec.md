@@ -67,7 +67,7 @@
 - [x] 3. `POST /api/logout`
 - [x] 4. Кнопка Logout в GUI
 - [x] 5. Rate limiting / lockout на `/api/login`
-- [ ] 6. Security-заголовки
+- [x] 6. Security-заголовки
 
 ## Открытые вопросы
 
