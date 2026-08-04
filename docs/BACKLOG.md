@@ -89,9 +89,17 @@ Streamlit-приложение `app.py` — карточный вид `data/jobs
 
 Живой смок-тест перед включением таймера: ручной прогон через `systemctl --user start` отработал и залогировался в journald, `systemd-analyze --user verify` — зелёный. Не проверялось живьём: реальный догон пропущенного полуночного окна (`Persistent=true`) — потребовало бы держать машину выключенной через полночь ради теста.
 
-## Тестовое покрытие (реализовано 2026-07-25, дополнено при query-connectors и systemd-таймере)
+## Оздоровление схемы `postings` — краш org=NULL, STRICT, дедуп-симметрия (реализовано 2026-08-04)
 
-89 тестов в `tests/` (`pytest`), полностью герметичны — ни один не трогает боевую `data/jobs.db` (проверено живым замером до/после каждого коммита). Запуск: `.venv/bin/pytest` (или `.venv/bin/python -m pytest`) из корня.
+Ночной прогон `run.py` упал (`sqlite3.IntegrityError: NOT NULL constraint failed: postings.org`) — Adzuna отдал агентскую/анонимизированную вакансию без `company.display_name`, `store.upsert_search_postings` не была к этому готова, исключение убило остаток батча (LinkedIn/Indeed/expiry в ту ночь не выполнились). Разбор по `/brainstorming` вскрыл это как частный случай более общего пробела (недоверенные внешние данные долетают до `NOT NULL` без валидации) и заодно асимметрию дедупа между семьями хранения. Структурный фикс задокументирован и реализован по `docs/tech_specs/postings-schema-hardening/spec.md`:
+
+- Двухслойная валидация: коннекторы (`adzuna.py`/`himalayas.py`/`jobspy_search.py`) отсеивают записи без org/title/url/ats_id на границе; `store.py` — бэкстоп на `sqlite3.IntegrityError` в обоих `upsert_*` (лог + пропуск, батч не падает).
+- `postings` мигрирована на `STRICT` + `CHECK(status)` — миграция идемпотентна (`open_db()`), с файловым бэкапом и сверкой `COUNT(*)` до/после. Честно зафиксировано в спеке: для самого бага STRICT не добавляет ничего сверх уже существовавшего `NOT NULL` — польза чисто в самодокументировании схемы и защите будущей `relevance INTEGER` (`triage-and-autonomy`).
+- `upsert_postings` теперь проверяет `dedup_key` перед вставкой, как уже делает `upsert_search_postings` — закрыт структурный пробел в кросс-source дедупе для ATS-семьи (0 живых коллизий на момент фикса, риск не проявившийся, но подтверждённый чтением кода).
+
+## Тестовое покрытие (реализовано 2026-07-25, дополнено при query-connectors, systemd-таймере и оздоровлении схемы)
+
+104 теста в `tests/` (`pytest`), полностью герметичны — ни один не трогает боевую `data/jobs.db` (проверено живым замером до/после каждого коммита). Запуск: `.venv/bin/pytest` (или `.venv/bin/python -m pytest`) из корня.
 
 - `test_lever.py` / `test_greenhouse.py` / `test_personio.py` / `test_himalayas.py` / `test_adzuna.py` / `test_jobspy_search.py` — HTTP замокан (`requests_mock` или монкипатч `scrape_jobs`), проверяют парсинг реального формата ответа (структура ВСЕХ коннекторов подтверждена живым запросом при разработке — включая ловушку NaN-truthy у jobspy: `bool(float('nan'))` даёт `True` в Python, наивный `if row['is_remote']` пометил бы отсутствующее значение как remote).
 - `test_store.py` — реконсиляционная логика ATS-семьи (insert/idempotent-rerun/likely_closed только для `new`/скоуп по org+source, включая новую защиту пустого-ответа-с-историей) + search-семьи (dedup_key backfill на legacy-строках, кросс-source дедуп, отсутствие реконсиляции, age-based expire со скоупом по источникам).
