@@ -1,2 +1,18 @@
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+# Inline SVG string literals (icon glyphs) — unwrappable, not a style lapse.
+"app/app.py" = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+explicit_package_bases = true

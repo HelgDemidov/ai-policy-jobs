@@ -10,9 +10,8 @@ what redirects the app away from the real data/jobs.db.
 """
 from pathlib import Path
 
-from streamlit.testing.v1 import AppTest
-
 import store
+from streamlit.testing.v1 import AppTest
 
 APP_PATH = str(Path(__file__).resolve().parent.parent / "app" / "app.py")
 

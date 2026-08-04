@@ -1,0 +1,14 @@
+{
+  "name": "job-search",
+  "private": true,
+  "type": "module",
+  "description": "Lint scaffold for web/public/*.js (docs/tech_specs/vercel-web-gui/spec.md) — no Node app code lives here.",
+  "scripts": {
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "eslint": "10.8.0",
+    "@eslint/js": "10.0.1",
+    "globals": "17.9.0"
+  }
+}

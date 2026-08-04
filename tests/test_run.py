@@ -1,8 +1,7 @@
 """Tests for the connector orchestrator (scripts/run.py)."""
-import yaml
-
 import run
 import store
+import yaml
 
 
 def _posting(ats_id, **overrides):
