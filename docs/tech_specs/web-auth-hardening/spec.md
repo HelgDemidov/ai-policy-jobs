@@ -62,7 +62,7 @@
 
 ## Чек-лист реализации
 
-- [ ] 1. `auth_state` — schema + migration
+- [x] 1. `auth_state` — schema + migration
 - [ ] 2. HMAC-токены с epoch, constant-time сравнение
 - [ ] 3. `POST /api/logout`
 - [ ] 4. Кнопка Logout в GUI

@@ -89,6 +89,21 @@ postings = Table(
 
 Index("ix_postings_org_status", postings.c.org, postings.c.status)
 
+# Single-row global auth state (id=1) — session epoch for revocable HMAC
+# tokens plus login-lockout counters, both intentionally global rather than
+# per-session/per-IP given the single-curator scale (docs/tech_specs/
+# web-auth-hardening/spec.md §1/§4). Row is created lazily by _auth.py on
+# first read, not seeded by the migration.
+auth_state = Table(
+    "auth_state",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("epoch", Integer, nullable=False, server_default="0"),
+    Column("failed_attempts", Integer, nullable=False, server_default="0"),
+    Column("locked_until", DateTime(timezone=True)),
+    Column("updated_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+)
+
 
 def resolve_database_url(url: str) -> str:
     """Neon/Vercel hand out a bare `postgresql://` URL — SQLAlchemy defaults
