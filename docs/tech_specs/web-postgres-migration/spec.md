@@ -180,8 +180,8 @@ else:
 - [x] `web/api/_schema.py` — `postings`/`organizations`/`searches` Table-определения, индексы
 - [x] `alembic/env.py` + `alembic.ini`, миграции `0001`-`0002` (см. §4) — `include_object`-исключение для `search_vector`/`ix_postings_search_vector` добавлено по образцу референса, `alembic check` живьём подтверждает отсутствие дрейфа
 - [x] `tests/integration/test_migrations.py` — миграции применяются на реальном Postgres (Neon, `quiet-sea-26110140`), схема совпадает с `_schema.py`'s metadata, FTS-ранжирование проверено вживую (title-match 0.995 > description-only-match 0.366)
-- [ ] `web/api/_repo.py` — `_build_where` (с FTS-веткой), `list_postings`, `set_status`, `get_engine`
-- [ ] `tests/web/test_repo.py` — включая org_id-резолюцию и LIKE-fallback ветку полнотекстового поиска
+- [x] `web/api/_repo.py` — `_build_where` (с FTS-веткой), `list_postings`, `set_status`, `get_engine`; попутно нашёл и починил регресс в собственном черновике — забыл перенести `COALESCE(posted_at, first_seen)` из старого `_logic.py`
+- [x] `tests/web/test_repo.py` (15 тестов) — LIKE-fallback ветка через SQLite; Postgres-ветка (`websearch_to_tsquery`) дополнительно проверена вживую через сам `_repo.list_postings` против реального Neon, не только через raw SQL
 - [ ] `web/api/postings.py`/`status.py` переписаны как тонкие обработчики
 - [ ] `tests/web/test_handlers.py` — HTTP-интеграционные тесты через реальный `HTTPServer` на loopback, `tmp_path`-SQLite вместо `_repo.get_engine()`
 - [x] `sqlalchemy==2.0.51`, `psycopg[binary]==3.3.4` (сверено на PyPI 2026-08-04) — в `web/requirements.txt` И корневом `requirements.txt`; `alembic==1.19.0` — ТОЛЬКО в корневой `requirements.txt` (`edd3395`)
