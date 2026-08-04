@@ -74,7 +74,7 @@
 - [x] `store.py`: try/except IntegrityError в обеих `upsert_*` + тесты
 - [x] `adzuna.py`/`himalayas.py`/`jobspy_search.py`: отсев невалидных записей + тесты (включая `ats_id is None`-нюанс jobspy)
 - [x] Миграция STRICT+CHECK (идемпотентность, транзакционность, сохранность данных) + тесты
-- [ ] `upsert_postings`: dedup_key-проверка перед INSERT + тесты
+- [x] `upsert_postings`: dedup_key-проверка перед INSERT + тесты
 - [ ] Живой прогон миграции на `data/jobs.db` (с бэкапом) вне test suite — сверить `COUNT(*)` до/после
 - [ ] Живой прогон `run.py` целиком после всех фиксов — подтвердить, что вчерашний краш больше не воспроизводится
 - [ ] `docs/BACKLOG.md` обновлён
