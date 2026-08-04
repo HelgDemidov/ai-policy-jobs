@@ -72,7 +72,7 @@
 ## Чек-лист реализации
 
 - [x] `store.py`: try/except IntegrityError в обеих `upsert_*` + тесты
-- [ ] `adzuna.py`/`himalayas.py`/`jobspy_search.py`: отсев невалидных записей + тесты (включая `ats_id is None`-нюанс jobspy)
+- [x] `adzuna.py`/`himalayas.py`/`jobspy_search.py`: отсев невалидных записей + тесты (включая `ats_id is None`-нюанс jobspy)
 - [ ] Миграция STRICT+CHECK (идемпотентность, транзакционность, сохранность данных) + тесты
 - [ ] `upsert_postings`: dedup_key-проверка перед INSERT + тесты
 - [ ] Живой прогон миграции на `data/jobs.db` (с бэкапом) вне test suite — сверить `COUNT(*)` до/после

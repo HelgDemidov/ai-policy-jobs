@@ -79,16 +79,38 @@ def test_fetch_empty_results():
     assert result == []
 
 
-def test_fetch_handles_missing_company_and_location():
+def test_fetch_handles_missing_location():
     job = dict(FULL_JOB)
-    del job["company"]
     del job["location"]
     with requests_mock.Mocker() as m:
         m.get("https://api.adzuna.com/v1/api/jobs/gb/search/1", json={"results": [job]})
         result = adzuna.fetch({"phrase": "think tank", "country": "gb"})
 
-    assert result[0]["org"] is None
     assert result[0]["location"] is None
+
+
+def test_fetch_skips_record_missing_company():
+    # Agency/anonymized listings — no company.display_name at all — are
+    # unactionable without an employer and must not reach the store.
+    job = dict(FULL_JOB)
+    del job["company"]
+    with requests_mock.Mocker() as m:
+        m.get("https://api.adzuna.com/v1/api/jobs/gb/search/1", json={"results": [job]})
+        result = adzuna.fetch({"phrase": "think tank", "country": "gb"})
+
+    assert result == []
+
+
+def test_fetch_skips_invalid_record_but_keeps_valid_ones():
+    bad = dict(FULL_JOB)
+    bad["id"] = "bad-1"
+    del bad["company"]
+    with requests_mock.Mocker() as m:
+        m.get("https://api.adzuna.com/v1/api/jobs/gb/search/1", json={"results": [bad, FULL_JOB]})
+        result = adzuna.fetch({"phrase": "think tank", "country": "gb"})
+
+    assert len(result) == 1
+    assert result[0]["ats_id"] == FULL_JOB["id"]
 
 
 def test_missing_credentials_raises(tmp_path, monkeypatch):

@@ -106,18 +106,51 @@ def test_is_remote_true_sets_workplace_type(monkeypatch):
     assert result[0]["workplace_type"] == "remote"
 
 
-def test_nan_fields_become_none(monkeypatch):
+def test_nan_optional_fields_become_none(monkeypatch):
     row = dict(FULL_ROW)
-    row["company"] = np.nan
     row["description"] = np.nan
     row["date_posted"] = pd.NaT
     monkeypatch.setattr(jobspy_search, "scrape_jobs", lambda **_kw: _df([row]))
 
     result = jobspy_search.fetch_linkedin({"query": "x"})
 
-    assert result[0]["org"] is None
     assert result[0]["description"] is None
     assert result[0]["posted_at"] is None
+
+
+def test_missing_company_skips_record(monkeypatch):
+    row = dict(FULL_ROW)
+    row["company"] = np.nan
+    monkeypatch.setattr(jobspy_search, "scrape_jobs", lambda **_kw: _df([row]))
+
+    result = jobspy_search.fetch_linkedin({"query": "x"})
+
+    assert result == []
+
+
+def test_missing_id_and_job_url_skips_record(monkeypatch):
+    # str(None) == "None" (truthy) — ats_id must be checked before str().
+    row = dict(FULL_ROW)
+    row["id"] = np.nan
+    row["job_url"] = np.nan
+    monkeypatch.setattr(jobspy_search, "scrape_jobs", lambda **_kw: _df([row]))
+
+    result = jobspy_search.fetch_linkedin({"query": "x"})
+
+    assert result == []
+
+
+def test_fetch_linkedin_skips_invalid_rows_but_keeps_valid_ones(monkeypatch):
+    bad = dict(FULL_ROW)
+    bad["company"] = np.nan
+    good = dict(FULL_ROW)
+    good["id"] = "li-good"
+    monkeypatch.setattr(jobspy_search, "scrape_jobs", lambda **_kw: _df([bad, good]))
+
+    result = jobspy_search.fetch_linkedin({"query": "x"})
+
+    assert len(result) == 1
+    assert result[0]["ats_id"] == "li-good"
 
 
 def test_nan_is_remote_does_not_become_truthy_remote(monkeypatch):

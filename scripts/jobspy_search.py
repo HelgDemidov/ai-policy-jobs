@@ -36,20 +36,27 @@ def _clean(value):
     return value
 
 
-def _row_to_posting(row: pd.Series) -> dict:
+def _row_to_posting(row: pd.Series) -> dict | None:
     ats_id = _clean(row.get("id")) or _clean(row.get("job_url"))
+    if ats_id is None:
+        return None  # str(None) == "None" (truthy) — must check before str()
+    org = _clean(row.get("company"))
+    title = _clean(row.get("title"))
+    url = _clean(row.get("job_url"))
+    if not org or not title or not url:
+        return None  # неполные записи — нетриажируемы, не сохраняем
     date_posted = _clean(row.get("date_posted"))
     posted_at = date_posted.isoformat() if hasattr(date_posted, "isoformat") else None
     is_remote = _clean(row.get("is_remote"))
     return {
         "ats_id": str(ats_id),
-        "org": _clean(row.get("company")),
-        "title": _clean(row.get("title")),
+        "org": org,
+        "title": title,
         "location": _clean(row.get("location")),
         "workplace_type": "remote" if is_remote is True else None,
         "team": None,
         "commitment": _clean(row.get("job_type")),
-        "url": _clean(row.get("job_url")),
+        "url": url,
         "description": _clean(row.get("description")),
         "posted_at": posted_at,
     }
@@ -65,7 +72,7 @@ def fetch_linkedin(spec: dict) -> list[dict]:
     )
     if df.empty:
         return []
-    return [_row_to_posting(row) for _, row in df.iterrows()]
+    return [p for p in (_row_to_posting(row) for _, row in df.iterrows()) if p is not None]
 
 
 def fetch_indeed(spec: dict) -> list[dict]:
@@ -78,4 +85,4 @@ def fetch_indeed(spec: dict) -> list[dict]:
     )
     if df.empty:
         return []
-    return [_row_to_posting(row) for _, row in df.iterrows()]
+    return [p for p in (_row_to_posting(row) for _, row in df.iterrows()) if p is not None]
