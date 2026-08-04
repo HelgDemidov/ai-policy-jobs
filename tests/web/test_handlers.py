@@ -15,6 +15,7 @@ import _repo
 import _schema
 import facets
 import login
+import logout
 import postings
 import pytest
 import requests
@@ -52,6 +53,7 @@ def live_servers(tmp_path, monkeypatch):
         "postings": _start(postings.handler),
         "status": _start(status.handler),
         "login": _start(login.handler),
+        "logout": _start(logout.handler),
         "facets": _start(facets.handler),
     }
 
@@ -229,3 +231,26 @@ def test_login_correct_password_sets_cookie_that_authenticates(live_servers):
     postings_resp = requests.get(urls["postings"], headers={"Cookie": f"site_auth={token}"})
     assert postings_resp.status_code == 200
     assert postings_resp.json()["total"] == 1
+
+
+def test_logout_requires_auth(live_servers):
+    urls, _ = live_servers
+    resp = requests.post(urls["logout"])
+    assert resp.status_code == 401
+
+
+def test_logout_invalidates_the_token_that_was_used_to_call_it(live_servers):
+    urls, engine = live_servers
+    cookie = _auth_cookie(engine)
+
+    resp = requests.post(urls["logout"], headers=cookie)
+    assert resp.status_code == 200
+
+    postings_resp = requests.get(urls["postings"], headers=cookie)
+    assert postings_resp.status_code == 401
+
+
+def test_logout_clears_the_cookie_in_the_response(live_servers):
+    urls, engine = live_servers
+    resp = requests.post(urls["logout"], headers=_auth_cookie(engine))
+    assert "Max-Age=0" in resp.headers["Set-Cookie"]
