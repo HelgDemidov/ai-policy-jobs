@@ -2,7 +2,7 @@ Turn a feature/change request into a structured spec at `docs/tech_specs/<slug>/
 
 Take the task description from the user's message (and any command args) as the primary input. Everything below is a DEFAULT — an explicit instruction in that message overrides it.
 
-Adapted from G2AI_ME's `/tech-spec`, stripped to what this repo actually has: no CI, no coverage gate, no PR flow, flat `docs/tech_specs/` (no functional blocks), `docs/` tracked rather than gitignored. A private GitHub remote (`github.com/HelgDemidov/ai-policy-job`) exists since 2026-08-04 purely as an off-machine backup — it does not add CI/Actions or a PR flow.
+Adapted from G2AI_ME's `/tech-spec`, stripped to what this repo actually has: no CI, no coverage gate, no PR flow, flat `docs/tech_specs/` (no functional blocks), `docs/` tracked rather than gitignored. A private GitHub remote (`github.com/HelgDemidov/ai-policy-jobs`) exists since 2026-08-04 purely as an off-machine backup — it does not add CI/Actions or a PR flow.
 
 ## Cross-cutting principle
 

@@ -37,9 +37,9 @@ blob_sync.upload(DB_PATH)     # публикуем результат прого
 
 ## 3. Vercel-проект: `web/`
 
-Новая директория `web/` в этом же репозитории (Root Directory в Vercel), деплой **вручную** через `vercel deploy --prod`. С 2026-08-04 у репозитория есть приватный GitHub-remote (`github.com/HelgDemidov/ai-policy-job`) — Git-триггерный автодеплой теперь технически подключаем, но сознательно не подключаем: свежие данные и так приходят через Blob (§1), не через редеплой, а `web/` ещё не реализован. Пересмотреть при реализации, если ручной `vercel deploy --prod` станет неудобен — включается один раз в Vercel Dashboard (Settings → Git), спека не потребует.
+Новая директория `web/` в этом же репозитории (Root Directory в Vercel), деплой **вручную** через `vercel deploy --prod`. С 2026-08-04 у репозитория есть приватный GitHub-remote (`github.com/HelgDemidov/ai-policy-jobs`) — Git-триггерный автодеплой теперь технически подключаем, но сознательно не подключаем: свежие данные и так приходят через Blob (§1), не через редеплой, а `web/` ещё не реализован. Пересмотреть при реализации, если ручной `vercel deploy --prod` станет неудобен — включается один раз в Vercel Dashboard (Settings → Git), спека не потребует.
 
-**Проект уже создан (2026-08-04), живьём проверено:** `job-search-gui` (`prj_K2BCJPrgtMsmhtXhNTmI2cGYbZXo`, teamId `team_cWecMchTU2BD1cNpKzcAH6Od`), заведён через MCP-инструмент `deploy_to_vercel` (без локального CLI/логина) заглушкой — `public/index.html` + `api/health.py`. Прод-URL `https://job-search-gui.vercel.app`, билд `READY`, `lambdaRuntimeStats: {"python":1}` подтверждает живой Python-рантайм, `/api/health` отдаёт `{"status":"ok","runtime":"python"}` (проверено `WebFetch`). При реализации кода из этого спека: `cd web && vercel link` подхватит этот же существующий проект по имени — новый заводить не нужно.
+**Проект уже создан (2026-08-04), живьём проверено:** `ai-policy-jobs` (`prj_K2BCJPrgtMsmhtXhNTmI2cGYbZXo`, teamId `team_cWecMchTU2BD1cNpKzcAH6Od`; название `job-search-gui` до переименования 2026-08-04 в Dashboard — для симметрии с GitHub-репозиторием, id и весь остальной конфиг проекта переименование не затрагивает), заведён через MCP-инструмент `deploy_to_vercel` (без локального CLI/логина) заглушкой — `public/index.html` + `api/health.py`. Прод-URL `https://ai-policy-jobs.vercel.app`, билд `READY`, `lambdaRuntimeStats: {"python":1}` подтверждает живой Python-рантайм, `/api/health` отдаёт `{"status":"ok","runtime":"python"}` (проверено `WebFetch`). При реализации кода из этого спека: `cd web && vercel link` подхватит этот же существующий проект по имени — новый заводить не нужно.
 
 - `web/api/postings.py` — GET: скачивает blob, `SELECT * FROM postings`, фильтрация (tier/org/remote/hide-closed/поиск) — логика 1:1 с текущим `app.py:383-391`. Импортирует `scripts/store.py` (тот же `sys.path`-приём, что уже в `app.py:15-16`).
 - `web/api/status.py` — POST: скачивает blob, `UPDATE postings SET status=...` (та же query, что `app.py:306-313`), заливает обратно с `ifMatch` на etag скачанной версии (защита от гонки с параллельным `run.py`-sync — на масштабе одного куратора вероятность стремится к нулю, но проверка бесплатна).
@@ -49,7 +49,7 @@ blob_sync.upload(DB_PATH)     # публикуем результат прого
 
 Vercel Password Protection для production-деплоя требует платного плана (живая проверка документации: «Password protection requires an eligible plan» — на Hobby недоступна). Оставлять GUI публично читаемым нельзя: карточки несут emigrant/citizenship-нарратив куратора и адресный список организаций по чувствительным гео (`docs/BACKLOG.md`). Решение: минимальный собственный гейт — `SITE_PASSWORD` (env var) проверяется в каждой `api/*.py`-функции по cookie, выставляемой простой login-формой в `web/public/`. Не новый сервис, ~20 строк.
 
-**Где хранить `SITE_PASSWORD` (закрыто):** только в Vercel Dashboard проекта `job-search-gui` → Settings → Environment Variables — https://vercel.com/helgdemidovs-projects/job-search-gui/settings/environment-variables (значение вбивается прямо в веб-форму, не через чат). НЕ локальный `.env` репозитория — его читают только локальные Python-скрипты (`adzuna.py`, будущий `blob_sync.py`), до Vercel-функций он не доезжает. НЕ GitHub Secrets — репозиторий с 2026-08-04 зеркалится на приватный `github.com/HelgDemidov/ai-policy-job`, но GitHub Actions/CI там не заводили и не планируем (деплой ручной через `vercel deploy --prod`); секреты Actions существуют только внутри workflow, которого нет.
+**Где хранить `SITE_PASSWORD` (закрыто):** только в Vercel Dashboard проекта `ai-policy-jobs` → Settings → Environment Variables — https://vercel.com/helgdemidovs-projects/ai-policy-jobs/settings/environment-variables (значение вбивается прямо в веб-форму, не через чат). НЕ локальный `.env` репозитория — его читают только локальные Python-скрипты (`adzuna.py`, будущий `blob_sync.py`), до Vercel-функций он не доезжает. НЕ GitHub Secrets — репозиторий с 2026-08-04 зеркалится на приватный `github.com/HelgDemidov/ai-policy-jobs`, но GitHub Actions/CI там не заводили и не планируем (деплой ручной через `vercel deploy --prod`); секреты Actions существуют только внутри workflow, которого нет.
 
 ## Design rationale / отвергнутые альтернативы
 
@@ -87,14 +87,14 @@ Vercel Password Protection для production-деплоя требует пла�
 - [ ] `web/api/_logic.py` (`list_postings`, `set_status`) + тесты
 - [ ] `web/api/postings.py`, `web/api/status.py` (тонкие Vercel-хендлеры)
 - [ ] `web/public/index.html` + `style.css` + `app.js` — карточки/фильтры/тема/статус
-- [x] Vercel-проект `job-search-gui` создан и живьём проверен (2026-08-04, `deploy_to_vercel` MCP, заглушка `public/index.html`+`api/health.py`, `READY`, `/api/health` отвечает)
+- [x] Vercel-проект `ai-policy-jobs` (переименован из `job-search-gui` 2026-08-04) создан и живьём проверен (2026-08-04, `deploy_to_vercel` MCP, заглушка `public/index.html`+`api/health.py`, `READY`, `/api/health` отвечает)
 - [x] Vercel Blob store создан и подключён к проекту (2026-08-04, Dashboard → Storage, `job-search-gui-blob`, `store_tzXWWO2Y42v4IL6X`, регион `fra1`, Private, с read-write токеном)
-- [x] `SITE_PASSWORD` вбит в Settings → Environment Variables проекта `job-search-gui`
+- [x] `SITE_PASSWORD` вбит в Settings → Environment Variables проекта `ai-policy-jobs`
 - [x] `BLOB_READ_WRITE_TOKEN` в локальном `.env`, живьём проверен полным циклом `vercel blob put`/`list`/`del` (2026-08-04) — рабочий, тестовый файл подчищен, стор пуст
 
 **Живая находка:** ни `vercel env pull`, ни `vercel env run` не отдают реальное значение `BLOB_READ_WRITE_TOKEN` — Vercel-переменные с флагом «Sensitive» отдаются как плейсхолдер `"[SENSITIVE]"` через оба канала, не только в Dashboard. Единственный способ получить значение — через саму панель управления Blob-подключением («Manage Blob Connection»), не через общий Environment Variables UI/CLI-pull.
 - [ ] shared-secret гейт + тесты
-- [ ] `cd web && vercel link` (подхватывает существующий `job-search-gui`, новый проект не создавать) + `vercel deploy --prod` — реальный код поверх заглушки
+- [ ] `cd web && vercel link` (подхватывает существующий `ai-policy-jobs`, новый проект не создавать) + `vercel deploy --prod` — реальный код поверх заглушки
 - [ ] живой смок: открыть URL, проверить фильтры/статус-запись/тему в браузере
 - [ ] `docs/BACKLOG.md`, `CLAUDE.md`, `docs/user_guides/cli_reference.md` обновлены
 
