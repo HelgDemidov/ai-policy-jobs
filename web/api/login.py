@@ -26,11 +26,17 @@ class handler(BaseHTTPRequestHandler):
             return
 
         password = payload.get("password", "")
-        if not _auth.check_password(password):
+        engine = _repo.get_engine()
+
+        if _auth.is_locked_out(engine):
+            write_json(self, 429, {"error": "too many attempts, try again later"})
+            return
+
+        if not _auth.check_login(engine, password):
             write_json(self, 401, {"error": "wrong password"})
             return
 
-        token = _auth.issue_token(_repo.get_engine())
+        token = _auth.issue_token(engine)
         self.send_response(200)
         self.send_header("Content-type", "application/json")
         self.send_header(

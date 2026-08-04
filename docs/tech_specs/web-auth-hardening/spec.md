@@ -66,7 +66,7 @@
 - [x] 2. HMAC-токены с epoch, constant-time сравнение
 - [x] 3. `POST /api/logout`
 - [x] 4. Кнопка Logout в GUI
-- [ ] 5. Rate limiting / lockout на `/api/login`
+- [x] 5. Rate limiting / lockout на `/api/login`
 - [ ] 6. Security-заголовки
 
 ## Открытые вопросы
