@@ -1,5 +1,9 @@
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "-m 'not integration'"
+markers = [
+    "integration: requires a real Postgres (DATABASE_URL) — run via the test-integration CI job or manually, never part of the default suite",
+]
 
 [tool.ruff]
 line-length = 120
