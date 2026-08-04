@@ -89,6 +89,31 @@ def _build_where(filters, dialect_name):
     return conditions, order_by
 
 
+def get_facets(engine):
+    """Distinct tier/org values across ALL postings (ignoring current
+    filters) — used to populate the filter widgets. A dedicated DISTINCT
+    query, not a large page of full rows: bounded by the number of unique
+    values (currently ~250 orgs), not by total row count, so unlike a
+    "fetch a big-enough page" approach it has no size ceiling to silently
+    drift out of sync with anything as postings grows (live-caught
+    2026-08-04: exactly that drift — a page-size constant here and an
+    assumed-big-enough request size in app.js — under-counted the org
+    list once real data exceeded the smaller of the two)."""
+    postings = _schema.postings
+    with engine.connect() as conn:
+        tiers = [
+            row[0]
+            for row in conn.execute(
+                select(postings.c.tier).where(postings.c.tier.isnot(None)).distinct().order_by(postings.c.tier)
+            )
+        ]
+        orgs = [
+            row[0]
+            for row in conn.execute(select(postings.c.org).distinct().order_by(postings.c.org))
+        ]
+    return {"tiers": tiers, "orgs": orgs}
+
+
 def list_postings(engine, filters, page=1, size=60):
     postings = _schema.postings
     conditions, order_by = _build_where(filters, engine.dialect.name)

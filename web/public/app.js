@@ -1,14 +1,6 @@
 const STATUS_OPTIONS = ["new", "reviewed", "applied", "rejected", "likely_closed"];
 const TIER_CLASS = { A: "tier-a", B: "tier-b", C: "tier-c" };
 const PAGE_SIZE = 60;
-// Ceiling for the one-time, unfiltered fetch used only to discover which
-// tier/org values exist (populates the filter checkboxes/select) — not
-// used for card rendering, which is always paginated. Generous headroom
-// over the project's own ~1000-row growth target (spec criterion 3); if
-// the real count ever exceeds this, newly-discovered orgs simply won't
-// appear as filter options until this ceiling is raised — an accepted,
-// documented limit, not a silent one.
-const FACET_SIZE = 2000;
 
 // null until the first response tells us what's actually in the data —
 // mirrors app.py's `tiers = sorted(df["tier"].dropna().unique())` /
@@ -79,8 +71,7 @@ async function fetchPostings(filters, page, size) {
   return resp.json();
 }
 
-function populateTierFilter(postings) {
-  const tiers = Array.from(new Set(postings.map((p) => p.tier).filter(Boolean))).sort();
+function populateTierFilter(tiers) {
   knownTiers = tiers;
 
   const fieldset = document.getElementById("tier-filter");
@@ -99,8 +90,7 @@ function populateTierFilter(postings) {
   });
 }
 
-function populateOrgFilter(postings) {
-  const orgs = Array.from(new Set(postings.map((p) => p.org).filter(Boolean))).sort();
+function populateOrgFilter(orgs) {
   knownOrgs = orgs;
 
   const select = document.getElementById("org-filter");
@@ -114,14 +104,22 @@ function populateOrgFilter(postings) {
   });
 }
 
-// One-time, unfiltered fetch used only to discover tier/org values for the
-// filter widgets — separate from the paginated fetch used for card
-// rendering (fetchPostings/loadPage). Runs once per page load / "Refresh
-// from DB" click, not per filter interaction.
+// One-time fetch of distinct tier/org values to populate the filter
+// widgets — a dedicated DISTINCT query (/api/facets), not a large page of
+// /api/postings: the latter has an inherent row-count ceiling that
+// silently truncates once postings outgrows it (live-caught 2026-08-04 —
+// see web/api/_repo.py's get_facets docstring). Runs once per page load /
+// "Refresh from DB" click, not per filter interaction.
 async function loadFacets() {
-  const { items } = await fetchPostings({ hide_closed: false, remote_only: false, query: "" }, 1, FACET_SIZE);
-  populateTierFilter(items);
-  populateOrgFilter(items);
+  const resp = await fetch("/api/facets");
+  if (resp.status === 401) {
+    showLoginOverlay();
+    throw new AuthRequiredError();
+  }
+  if (!resp.ok) throw new Error(`GET /api/facets failed: ${resp.status}`);
+  const { tiers, orgs } = await resp.json();
+  populateTierFilter(tiers);
+  populateOrgFilter(orgs);
 }
 
 function updateVacancyCounter() {

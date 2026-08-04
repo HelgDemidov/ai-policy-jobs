@@ -12,6 +12,7 @@ from http.server import HTTPServer
 
 import _repo
 import _schema
+import facets
 import login
 import postings
 import pytest
@@ -50,6 +51,7 @@ def live_servers(tmp_path, monkeypatch):
         "postings": _start(postings.handler),
         "status": _start(status.handler),
         "login": _start(login.handler),
+        "facets": _start(facets.handler),
     }
 
     yield urls, engine
@@ -125,7 +127,31 @@ def test_postings_pagination_params_are_parsed(live_servers):
 def test_postings_size_is_capped_at_max(live_servers):
     urls, _ = live_servers
     resp = requests.get(urls["postings"], headers=_auth_cookie(), params={"size": "99999"})
-    assert resp.json()["size"] == 200
+    assert resp.json()["size"] == postings.MAX_SIZE
+
+
+def test_facets_requires_auth(live_servers):
+    urls, _ = live_servers
+    resp = requests.get(urls["facets"])
+    assert resp.status_code == 401
+
+
+def test_facets_returns_distinct_values_not_a_capped_page(live_servers):
+    """The regression this endpoint exists to prevent: distinct org count
+    must reflect ALL rows, not be truncated by postings.py's MAX_SIZE (a
+    page-rendering safety valve, unrelated to this endpoint) or any other
+    row-count ceiling — live-caught 2026-08-04 when a big-page-based
+    approach silently dropped orgs past its cutoff."""
+    urls, engine = live_servers
+    for i in range(300):  # comfortably past postings.py's old, since-removed 200/2000 caps
+        _insert(engine, str(i), tier="A", org=f"Org {i}")
+
+    resp = requests.get(urls["facets"], headers=_auth_cookie())
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["tiers"] == ["A"]
+    assert len(body["orgs"]) == 300
 
 
 def test_status_requires_auth(live_servers):
