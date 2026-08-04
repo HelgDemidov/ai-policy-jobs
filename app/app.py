@@ -8,6 +8,7 @@ reviewed/applied/rejected without leaving the page).
 import sqlite3
 import sys
 from pathlib import Path
+from typing import TypedDict
 
 import pandas as pd
 import streamlit as st
@@ -36,7 +37,22 @@ st.set_page_config(page_title="AI Policy Job Tracker", page_icon="🧭", layout=
 # (very dark ink in light theme, near-pastel in dark theme) — contrast-checked
 # 5.3–7.5:1 across all six theme×tier combinations, red included (red's low
 # luminance weight in the WCAG formula makes it the easiest to get wrong).
-LIGHT = {
+class _TierColors(TypedDict):
+    A: tuple[str, str]
+    B: tuple[str, str]
+    C: tuple[str, str]
+
+
+class _Palette(TypedDict):
+    ink_soft: str
+    rule: str
+    accent: str
+    chip_bg: str
+    chip_fg: str
+    tier_colors: _TierColors
+
+
+LIGHT: _Palette = {
     "ink_soft": "#565c63", "rule": "#dcdcd4", "accent": "#1E88E5",
     "chip_bg": "#e2e6ea", "chip_fg": "#565c63",
     "tier_colors": {
@@ -45,7 +61,7 @@ LIGHT = {
         "C": ("rgba(211,47,47,0.14)", "#b71c1c"),
     },
 }
-DARK = {  # deep summer night — deep navy sky + firefly-lime, not generic dark-gray
+DARK: _Palette = {  # deep summer night — deep navy sky + firefly-lime, not generic dark-gray
     "ink_soft": "#a7bfe0", "rule": "#28407a", "accent": "#c0e86e",
     "chip_bg": "#1c3155", "chip_fg": "#c7d6ee",
     "tier_colors": {
