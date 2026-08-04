@@ -86,7 +86,7 @@ Vercel Password Protection для production-деплоя требует пла�
 - [x] врезка sync в `run.py` `__main__`
 - [x] `web/api/_logic.py` (`list_postings`, `set_status`) + тесты
 - [x] `web/api/postings.py`, `web/api/status.py` (тонкие Vercel-хендлеры)
-- [ ] `web/public/index.html` + `style.css` + `app.js` — карточки/фильтры/тема/статус
+- [x] `web/public/index.html` + `style.css` + `app.js` — карточки/фильтры/тема/статус
 - [x] Vercel-проект `ai-policy-jobs` (переименован из `job-search-gui` 2026-08-04) создан и живьём проверен (2026-08-04, `deploy_to_vercel` MCP, заглушка `public/index.html`+`api/health.py`, `READY`, `/api/health` отвечает)
 - [x] Vercel Blob store создан и подключён к проекту (2026-08-04, Dashboard → Storage, `job-search-gui-blob`, `store_tzXWWO2Y42v4IL6X`, регион `fra1`, Private, с read-write токеном)
 - [x] `SITE_PASSWORD` вбит в Settings → Environment Variables проекта `ai-policy-jobs`
