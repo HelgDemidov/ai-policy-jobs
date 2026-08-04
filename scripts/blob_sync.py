@@ -59,12 +59,18 @@ def download(dest: Path) -> None:
 
 def upload(src: Path) -> None:
     """Push `src` to the jobs.db blob, overwriting the existing one in place
-    (stable pathname — allowOverwrite=true, addRandomSuffix=false, so the
-    blob URL never changes across syncs)."""
+    (stable pathname, so the blob URL never changes across syncs).
+
+    --allow-overwrite and --add-random-suffix are presence-only boolean
+    flags in this CLI (live-verified against docs.vercel.com/docs/cli/blob
+    2026-08-04, after `--add-random-suffix false` silently turned the
+    suffix ON instead of off) — there is no `true`/`false` value form.
+    --allow-overwrite must be passed bare to enable it (default off);
+    --add-random-suffix must be omitted entirely to keep it off (also the
+    default) — passing it at all, with any trailing value, turns it on."""
     _run([
         "put", str(src),
         "--access", "private",
         "--pathname", BLOB_PATHNAME,
-        "--allow-overwrite", "true",
-        "--add-random-suffix", "false",
+        "--allow-overwrite",
     ])
