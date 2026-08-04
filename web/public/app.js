@@ -50,8 +50,14 @@ function buildQueryString(filters) {
   return params.toString();
 }
 
+class AuthRequiredError extends Error {}
+
 async function fetchPostings(filters) {
   const resp = await fetch(`/api/postings?${buildQueryString(filters)}`);
+  if (resp.status === 401) {
+    showLoginOverlay();
+    throw new AuthRequiredError();
+  }
   if (!resp.ok) throw new Error(`GET /api/postings failed: ${resp.status}`);
   return resp.json();
 }
@@ -195,6 +201,17 @@ async function refresh() {
   if (knownTiers === null) populateTierFilter(postings);
   if (knownOrgs === null) populateOrgFilter(postings);
   renderCards(postings);
+  hideLoginOverlay();
+}
+
+function showLoginOverlay() {
+  document.getElementById("app").hidden = true;
+  document.getElementById("login-overlay").hidden = false;
+}
+
+function hideLoginOverlay() {
+  document.getElementById("login-overlay").hidden = true;
+  document.getElementById("app").hidden = false;
 }
 
 function applyTheme(value) {
@@ -224,8 +241,31 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("org-filter").addEventListener("change", refresh);
   document.getElementById("search-input").addEventListener("input", debounce(refresh, 300));
 
+  document.getElementById("login-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const password = document.getElementById("login-password").value;
+    const errorEl = document.getElementById("login-error");
+
+    const resp = await fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+    if (!resp.ok) {
+      errorEl.hidden = false;
+      return;
+    }
+    errorEl.hidden = true;
+    refreshOrReportError();
+  });
+
+  refreshOrReportError();
+});
+
+function refreshOrReportError() {
   refresh().catch((err) => {
+    if (err instanceof AuthRequiredError) return; // login overlay already shown
     console.error(err);
     document.getElementById("card-grid").textContent = "Failed to load postings.";
   });
-});
+}
