@@ -18,7 +18,14 @@ import _repo  # noqa: E402
 from _http import write_json  # noqa: E402
 
 DEFAULT_SIZE = 60
-MAX_SIZE = 200
+# A pure defensive ceiling against an unreasonable request — nothing
+# functional depends on this exact number (tier/org filter values come
+# from the dedicated /api/facets DISTINCT query, not from a large
+# /api/postings page — see _repo.get_facets's docstring for why that
+# matters). Expressed relative to DEFAULT_SIZE rather than as an
+# independent literal so the two can't drift apart the way an earlier,
+# unrelated pair of hardcoded size constants did (live-caught 2026-08-04).
+MAX_SIZE = DEFAULT_SIZE * 10
 
 
 def _parse_filters(query: dict) -> dict:

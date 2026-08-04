@@ -165,6 +165,32 @@ def test_pagination_total_reflects_filters_not_just_the_page():
     assert total == 2
 
 
+def test_get_facets_returns_distinct_sorted_values_regardless_of_row_count():
+    engine = _engine()
+    _insert(engine, "1", tier="B", org="Beta")
+    _insert(engine, "2", tier="A", org="Alpha")
+    _insert(engine, "3", tier="A", org="Alpha")  # duplicate tier/org, should not repeat
+    _insert(engine, "4", tier=None, org="Gamma")  # NULL tier excluded, org still counted
+
+    facets = _repo.get_facets(engine)
+
+    assert facets["tiers"] == ["A", "B"]
+    assert facets["orgs"] == ["Alpha", "Beta", "Gamma"]
+
+
+def test_get_facets_reflects_all_rows_even_beyond_any_page_size():
+    """The whole reason get_facets is a DISTINCT query and not a large
+    /api/postings page: it must see every distinct org regardless of how
+    many rows exist, with no size ceiling to outgrow."""
+    engine = _engine()
+    for i in range(500):
+        _insert(engine, str(i), org=f"Org {i}")
+
+    facets = _repo.get_facets(engine)
+
+    assert len(facets["orgs"]) == 500
+
+
 def test_set_status_updates_matching_row():
     engine = _engine()
     _insert(engine, "1", source="lever", status="new")
