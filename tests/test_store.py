@@ -162,6 +162,39 @@ def test_empty_response_guard_is_scoped_to_org_and_source(tmp_path):
     assert beta_count == 0
 
 
+# --- IntegrityError backstop (invalid records don't crash the batch) --------
+
+
+def test_upsert_postings_skips_invalid_record_without_crashing(tmp_path, capsys):
+    conn = store.open_db(tmp_path / "jobs.db")
+
+    new_count = store.upsert_postings(
+        conn, "Acme", "A", "lever",
+        [_posting("1", title=None), _posting("2")],
+    )
+
+    assert new_count == 1
+    ats_ids = [r[0] for r in conn.execute("SELECT ats_id FROM postings").fetchall()]
+    assert ats_ids == ["2"]
+    captured = capsys.readouterr()
+    assert "skipping invalid posting" in captured.out
+
+
+def test_upsert_search_postings_skips_invalid_record_without_crashing(tmp_path, capsys):
+    conn = store.open_db(tmp_path / "jobs.db")
+
+    new_count = store.upsert_search_postings(
+        conn, "himalayas",
+        [_search_posting("h1", None, title="No Employer"), _search_posting("h2", "Acme", title="Role")],
+    )
+
+    assert new_count == 1
+    ats_ids = [r[0] for r in conn.execute("SELECT ats_id FROM postings").fetchall()]
+    assert ats_ids == ["h2"]
+    captured = capsys.readouterr()
+    assert "skipping invalid posting" in captured.out
+
+
 # --- dedup_key migration + backfill ---------------------------------------
 
 

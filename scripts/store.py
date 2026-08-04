@@ -90,26 +90,34 @@ def upsert_postings(conn: sqlite3.Connection, org: str, tier: str | None, source
             (source, p["ats_id"]),
         ).fetchone()
         if row is None:
-            conn.execute(
-                """INSERT INTO postings
-                   (org, tier, source, ats_id, title, location, workplace_type,
-                    team, commitment, url, description, posted_at, first_seen, last_seen, status, dedup_key)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'new', ?)""",
-                (org, tier, source, p["ats_id"], p["title"], p.get("location"),
-                 p.get("workplace_type"), p.get("team"), p.get("commitment"),
-                 p["url"], p.get("description"), p.get("posted_at"), now, now,
-                 _normalize_dedup_key(org, p["title"])),
-            )
+            try:
+                conn.execute(
+                    """INSERT INTO postings
+                       (org, tier, source, ats_id, title, location, workplace_type,
+                        team, commitment, url, description, posted_at, first_seen, last_seen, status, dedup_key)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'new', ?)""",
+                    (org, tier, source, p["ats_id"], p["title"], p.get("location"),
+                     p.get("workplace_type"), p.get("team"), p.get("commitment"),
+                     p["url"], p.get("description"), p.get("posted_at"), now, now,
+                     _normalize_dedup_key(org, p["title"])),
+                )
+            except sqlite3.IntegrityError as exc:
+                print(f"  ! {org} ({source}): skipping invalid posting {p.get('ats_id')!r} — {exc}")
+                continue
             new_count += 1
         else:
-            conn.execute(
-                """UPDATE postings SET title=?, location=?, workplace_type=?,
-                   team=?, commitment=?, description=?, last_seen=?
-                   WHERE source=? AND ats_id=?""",
-                (p["title"], p.get("location"), p.get("workplace_type"),
-                 p.get("team"), p.get("commitment"), p.get("description"), now,
-                 source, p["ats_id"]),
-            )
+            try:
+                conn.execute(
+                    """UPDATE postings SET title=?, location=?, workplace_type=?,
+                       team=?, commitment=?, description=?, last_seen=?
+                       WHERE source=? AND ats_id=?""",
+                    (p["title"], p.get("location"), p.get("workplace_type"),
+                     p.get("team"), p.get("commitment"), p.get("description"), now,
+                     source, p["ats_id"]),
+                )
+            except sqlite3.IntegrityError as exc:
+                print(f"  ! {org} ({source}): skipping invalid posting update {p.get('ats_id')!r} — {exc}")
+                continue
 
     if seen_ids:
         placeholders = ",".join("?" * len(seen_ids))
@@ -160,14 +168,17 @@ def upsert_search_postings(conn: sqlite3.Connection, source: str, postings: list
             (source, p["ats_id"]),
         ).fetchone()
         if row is not None:
-            conn.execute(
-                """UPDATE postings SET title=?, location=?, workplace_type=?,
-                   team=?, commitment=?, description=?, last_seen=?
-                   WHERE source=? AND ats_id=?""",
-                (p["title"], p.get("location"), p.get("workplace_type"),
-                 p.get("team"), p.get("commitment"), p.get("description"), now,
-                 source, p["ats_id"]),
-            )
+            try:
+                conn.execute(
+                    """UPDATE postings SET title=?, location=?, workplace_type=?,
+                       team=?, commitment=?, description=?, last_seen=?
+                       WHERE source=? AND ats_id=?""",
+                    (p["title"], p.get("location"), p.get("workplace_type"),
+                     p.get("team"), p.get("commitment"), p.get("description"), now,
+                     source, p["ats_id"]),
+                )
+            except sqlite3.IntegrityError as exc:
+                print(f"  ! {source}: skipping invalid posting update {p.get('ats_id')!r} — {exc}")
             continue
 
         dedup_key = _normalize_dedup_key(p["org"], p["title"])
@@ -176,15 +187,19 @@ def upsert_search_postings(conn: sqlite3.Connection, source: str, postings: list
             conn.execute("UPDATE postings SET last_seen=? WHERE id=?", (now, dup[0]))
             continue
 
-        conn.execute(
-            """INSERT INTO postings
-               (org, tier, source, ats_id, title, location, workplace_type,
-                team, commitment, url, description, posted_at, first_seen, last_seen, status, dedup_key)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'new', ?)""",
-            (p["org"], p.get("tier"), source, p["ats_id"], p["title"], p.get("location"),
-             p.get("workplace_type"), p.get("team"), p.get("commitment"),
-             p["url"], p.get("description"), p.get("posted_at"), now, now, dedup_key),
-        )
+        try:
+            conn.execute(
+                """INSERT INTO postings
+                   (org, tier, source, ats_id, title, location, workplace_type,
+                    team, commitment, url, description, posted_at, first_seen, last_seen, status, dedup_key)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'new', ?)""",
+                (p["org"], p.get("tier"), source, p["ats_id"], p["title"], p.get("location"),
+                 p.get("workplace_type"), p.get("team"), p.get("commitment"),
+                 p["url"], p.get("description"), p.get("posted_at"), now, now, dedup_key),
+            )
+        except sqlite3.IntegrityError as exc:
+            print(f"  ! {source}: skipping invalid posting {p.get('ats_id')!r} — {exc}")
+            continue
         new_count += 1
 
     conn.commit()
