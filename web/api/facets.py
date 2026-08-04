@@ -17,8 +17,9 @@ from _http import write_json  # noqa: E402
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
-        if not _auth.is_authenticated(self.headers.get("Cookie")):
+        engine = _repo.get_engine()
+        if not _auth.is_authenticated(self.headers.get("Cookie"), engine):
             write_json(self, 401, {"error": "unauthorized"})
             return
 
-        write_json(self, 200, _repo.get_facets(_repo.get_engine()))
+        write_json(self, 200, _repo.get_facets(engine))
