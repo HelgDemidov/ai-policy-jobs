@@ -92,8 +92,8 @@ def main(
     unattended daily timer can't otherwise tell "everything is broken" apart
     from "nothing new today" — see docs/tech_specs/triage-and-autonomy/spec.md
     §3), 0 otherwise, including on partial failure or an empty config."""
-    orgs_path = orgs_path or Path(__file__).resolve().parent.parent / "orgs.yaml"
-    searches_path = searches_path or Path(__file__).resolve().parent.parent / "searches.yaml"
+    orgs_path = orgs_path or Path(__file__).resolve().parent.parent / "config" / "orgs.yaml"
+    searches_path = searches_path or Path(__file__).resolve().parent.parent / "config" / "searches.yaml"
 
     conn = store.open_db(db_path)
 
