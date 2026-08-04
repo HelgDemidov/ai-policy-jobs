@@ -5,9 +5,9 @@
 ### Подключение (новая сессия Claude CLI)
 
 ```bash
-cd ~/Рабочий\ стол/job-search && claude
+cd ~/Рабочий\ стол/Projects/Dev/job-search && claude
 ```
-Полный путь: `/home/fastcentrifuge/Рабочий стол/job-search`. Отдельный, независимый git-репозиторий; свежая сессия сразу подхватит `CLAUDE.md` этой папки.
+Полный путь: `/home/fastcentrifuge/Рабочий стол/Projects/Dev/job-search`. Отдельный, независимый git-репозиторий; свежая сессия сразу подхватит `CLAUDE.md` этой папки.
 
 **Streamlit UI:** http://localhost:8501 (после запуска ниже; порт по умолчанию, если свободен). Никаких других сетевых адресов/серверов в проекте нет — SQLite - локальный файл, ATS/агрегаторы вызываются исходящими HTTP-запросами, входящих портов не открывают. Ключи Adzuna — `.env` в корне (не в git).
 
@@ -16,7 +16,7 @@ cd ~/Рабочий\ стол/job-search && claude
 ```bash
 .venv/bin/python scripts/run.py            # синхронизация: все ATS + все search-источники, включая LinkedIn
 .venv/bin/python scripts/run.py --linkedin  # то же (флаг включает спеки с manual: true — сейчас таких нет)
-.venv/bin/streamlit run app.py              # UI на localhost:8501
+.venv/bin/streamlit run app/app.py          # UI на localhost:8501
 .venv/bin/pytest                            # тесты (77+, герметично)
 ```
 
@@ -39,8 +39,8 @@ Description=Job Search Tracker — daily sync (scripts/run.py)
 
 [Service]
 Type=oneshot
-WorkingDirectory=/home/fastcentrifuge/Рабочий стол/job-search
-ExecStart="/home/fastcentrifuge/Рабочий стол/job-search/.venv/bin/python" "/home/fastcentrifuge/Рабочий стол/job-search/scripts/run.py"
+WorkingDirectory=/home/fastcentrifuge/Рабочий стол/Projects/Dev/job-search
+ExecStart="/home/fastcentrifuge/Рабочий стол/Projects/Dev/job-search/.venv/bin/python" "/home/fastcentrifuge/Рабочий стол/Projects/Dev/job-search/scripts/run.py"
 ```
 
 `job-search-run.timer`:
