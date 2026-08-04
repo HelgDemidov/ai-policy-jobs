@@ -65,7 +65,7 @@
 - [x] 1. `auth_state` — schema + migration
 - [x] 2. HMAC-токены с epoch, constant-time сравнение
 - [x] 3. `POST /api/logout`
-- [ ] 4. Кнопка Logout в GUI
+- [x] 4. Кнопка Logout в GUI
 - [ ] 5. Rate limiting / lockout на `/api/login`
 - [ ] 6. Security-заголовки
 
