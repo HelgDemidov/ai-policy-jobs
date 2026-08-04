@@ -32,14 +32,18 @@ def fetch(spec: dict) -> list[dict]:
         if not jobs:
             break
         for j in jobs:
+            org = j.get("companyName")
+            title = j.get("title")
+            if not org or not title:
+                continue  # вакансии без работодателя/названия — нетриажируемы
             posted_at = None
             if j.get("pubDate"):
                 posted_at = datetime.fromtimestamp(j["pubDate"], tz=timezone.utc).date().isoformat()
             location_restrictions = j.get("locationRestrictions") or []
             postings.append({
                 "ats_id": j["guid"],
-                "org": j.get("companyName"),
-                "title": j.get("title"),
+                "org": org,
+                "title": title,
                 "location": ", ".join(location_restrictions) or None,
                 "workplace_type": "remote",
                 "team": None,

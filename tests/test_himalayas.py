@@ -95,6 +95,33 @@ def test_fetch_handles_missing_location_restrictions(requests_mock, monkeypatch)
     assert result[0]["location"] is None
 
 
+def test_fetch_skips_record_missing_company_name(requests_mock, monkeypatch):
+    monkeypatch.setattr(himalayas.time, "sleep", lambda _seconds: None)
+    job = dict(FULL_JOB)
+    del job["companyName"]
+    _mock_one_page_then_empty(requests_mock, job)
+
+    result = himalayas.fetch({"query": "policy"})
+
+    assert result == []
+
+
+def test_fetch_skips_invalid_record_but_keeps_valid_ones(requests_mock, monkeypatch):
+    monkeypatch.setattr(himalayas.time, "sleep", lambda _seconds: None)
+    bad = dict(FULL_JOB)
+    bad["guid"] = "bad-1"
+    del bad["companyName"]
+    requests_mock.get(
+        "https://himalayas.app/jobs/api/search",
+        [{"json": _page([bad, FULL_JOB])}, {"json": EMPTY_PAGE}],
+    )
+
+    result = himalayas.fetch({"query": "policy"})
+
+    assert len(result) == 1
+    assert result[0]["ats_id"] == FULL_JOB["guid"]
+
+
 def test_fetch_empty_first_page_returns_empty_list(requests_mock, monkeypatch):
     monkeypatch.setattr(himalayas.time, "sleep", lambda _seconds: None)
     requests_mock.get("https://himalayas.app/jobs/api/search", json=EMPTY_PAGE)

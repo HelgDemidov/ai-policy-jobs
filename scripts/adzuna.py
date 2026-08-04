@@ -60,15 +60,20 @@ def fetch(spec: dict) -> list[dict]:
 
     postings = []
     for r in resp.json().get("results", []):
+        org = (r.get("company") or {}).get("display_name")
+        title = r.get("title")
+        url = r.get("redirect_url")
+        if not org or not title or not url:
+            continue  # агентские/анонимизированные листинги — нетриажируемы без работодателя
         postings.append({
             "ats_id": r["id"],
-            "org": (r.get("company") or {}).get("display_name"),
-            "title": r.get("title"),
+            "org": org,
+            "title": title,
             "location": (r.get("location") or {}).get("display_name"),
             "workplace_type": None,  # Adzuna doesn't expose this directly
             "team": None,
             "commitment": r.get("contract_time"),
-            "url": r.get("redirect_url"),
+            "url": url,
             "description": r.get("description"),  # already plain text, no HTML
             "posted_at": (r.get("created") or "")[:10] or None,
         })
