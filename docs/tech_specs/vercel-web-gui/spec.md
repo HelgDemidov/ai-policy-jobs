@@ -93,7 +93,7 @@ Vercel Password Protection для production-деплоя требует пла�
 - [x] `BLOB_READ_WRITE_TOKEN` в локальном `.env`, живьём проверен полным циклом `vercel blob put`/`list`/`del` (2026-08-04) — рабочий, тестовый файл подчищен, стор пуст
 
 **Живая находка:** ни `vercel env pull`, ни `vercel env run` не отдают реальное значение `BLOB_READ_WRITE_TOKEN` — Vercel-переменные с флагом «Sensitive» отдаются как плейсхолдер `"[SENSITIVE]"` через оба канала, не только в Dashboard. Единственный способ получить значение — через саму панель управления Blob-подключением («Manage Blob Connection»), не через общий Environment Variables UI/CLI-pull.
-- [ ] shared-secret гейт + тесты
+- [x] shared-secret гейт + тесты
 - [ ] `cd web && vercel link` (подхватывает существующий `ai-policy-jobs`, новый проект не создавать) + `vercel deploy --prod` — реальный код поверх заглушки
 - [ ] живой смок: открыть URL, проверить фильтры/статус-запись/тему в браузере
 - [ ] `docs/backlog/BACKLOG.md`, `CLAUDE.md`, `docs/user_guides/cli_reference.md` обновлены

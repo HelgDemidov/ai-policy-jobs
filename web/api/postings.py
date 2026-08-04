@@ -1,15 +1,16 @@
 """GET /api/postings?tier=A&tier=B&org=...&hide_closed=true&remote_only=false&query=...
 Thin Vercel handler — all filtering logic lives in _logic.list_postings.
 """
-import json
 import sqlite3
 import tempfile
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+import _auth
 import _blob
 import _logic
+from _http import write_json
 
 
 def _parse_filters(query: dict) -> dict:
@@ -28,6 +29,10 @@ def _parse_filters(query: dict) -> dict:
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
+        if not _auth.is_authenticated(self.headers.get("Cookie")):
+            write_json(self, 401, {"error": "unauthorized"})
+            return
+
         filters = _parse_filters(parse_qs(urlparse(self.path).query))
 
         db_bytes = _blob.download()
@@ -42,8 +47,4 @@ class handler(BaseHTTPRequestHandler):
         finally:
             tmp_path.unlink(missing_ok=True)
 
-        body = json.dumps(postings).encode("utf-8")
-        self.send_response(200)
-        self.send_header("Content-type", "application/json")
-        self.end_headers()
-        self.wfile.write(body)
+        write_json(self, 200, postings)
