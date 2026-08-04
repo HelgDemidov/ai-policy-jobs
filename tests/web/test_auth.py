@@ -97,3 +97,43 @@ def test_token_older_than_max_age_is_rejected(engine):
 
     assert _auth.is_authenticated(_cookie(token), engine, now=still_valid_at) is True
     assert _auth.is_authenticated(_cookie(token), engine, now=expired_at) is False
+
+
+def test_not_locked_out_initially(engine):
+    assert _auth.is_locked_out(engine) is False
+
+
+def test_check_login_correct_password_succeeds_and_resets_attempts(engine):
+    _auth.check_login(engine, "wrong")
+    assert _auth.check_login(engine, SITE_PASSWORD) is True
+    assert _auth.is_locked_out(engine) is False
+
+
+def test_check_login_wrong_password_fails_without_locking_out_below_threshold(engine):
+    for _ in range(_auth._LOCKOUT_THRESHOLD - 1):
+        assert _auth.check_login(engine, "wrong") is False
+    assert _auth.is_locked_out(engine) is False
+
+
+def test_lockout_triggers_after_threshold_failures(engine):
+    for _ in range(_auth._LOCKOUT_THRESHOLD):
+        _auth.check_login(engine, "wrong")
+    assert _auth.is_locked_out(engine) is True
+
+
+def test_locked_out_rejects_even_the_correct_password(engine):
+    for _ in range(_auth._LOCKOUT_THRESHOLD):
+        _auth.check_login(engine, "wrong")
+    assert _auth.is_locked_out(engine) is True
+    # check_login itself doesn't consult is_locked_out (login.py does that
+    # first) — check_password underneath would still say yes, callers must
+    # gate on is_locked_out before ever calling check_login.
+    assert _auth.check_password(SITE_PASSWORD) is True
+
+
+def test_lockout_expires_after_duration(engine):
+    start = 1_000_000
+    for _ in range(_auth._LOCKOUT_THRESHOLD):
+        _auth.check_login(engine, "wrong", now=start)
+    assert _auth.is_locked_out(engine, now=start + 1) is True
+    assert _auth.is_locked_out(engine, now=start + _auth._LOCKOUT_SECONDS + 1) is False

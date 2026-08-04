@@ -13,6 +13,7 @@ import hashlib
 import hmac
 import os
 import time
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import func, select
 
@@ -108,3 +109,66 @@ def bump_epoch(engine) -> None:
             .where(auth_state.c.id == 1)
             .values(epoch=auth_state.c.epoch + 1, updated_at=func.now())
         )
+
+
+def _now_dt(now: float | None) -> datetime:
+    if now is not None:
+        return datetime.fromtimestamp(now, tz=timezone.utc)
+    return datetime.now(timezone.utc)
+
+
+def _as_aware_utc(value: datetime | None) -> datetime | None:
+    """SQLite has no native timezone-aware storage, so a DateTime(timezone=
+    True) column round-trips as naive there even though Postgres returns it
+    aware — normalize both to aware-UTC before comparing, rather than
+    picking a column type that dodges the question."""
+    if value is None or value.tzinfo is not None:
+        return value
+    return value.replace(tzinfo=timezone.utc)
+
+
+def is_locked_out(engine, now: float | None = None) -> bool:
+    state = _get_or_create_state(engine)
+    locked_until = _as_aware_utc(state["locked_until"])
+    if locked_until is None:
+        return False
+    return _now_dt(now) < locked_until
+
+
+def check_login(engine, password: str, now: float | None = None) -> bool:
+    """The rate-limited entry point for POST /api/login (spec §4) — records
+    the attempt (success resets the failure counter; failure increments it
+    and locks out after _LOCKOUT_THRESHOLD consecutive misses) and reports
+    whether the password was correct. Does not itself consult
+    is_locked_out — call that first so the caller can return 429 (locked)
+    instead of 401 (wrong password) without a second lockout check here.
+    Global counter, not per-IP: Vercel Functions don't hand out a
+    trustworthy client IP without a dedicated proxy config, and a per-IP
+    table would grow unboundedly for no benefit at single-curator scale."""
+    if check_password(password):
+        _reset_attempts(engine)
+        return True
+    _record_failed_attempt(engine, now)
+    return False
+
+
+def _reset_attempts(engine) -> None:
+    auth_state = _schema.auth_state
+    _get_or_create_state(engine)
+    with engine.begin() as conn:
+        conn.execute(
+            auth_state.update()
+            .where(auth_state.c.id == 1)
+            .values(failed_attempts=0, locked_until=None, updated_at=func.now())
+        )
+
+
+def _record_failed_attempt(engine, now: float | None = None) -> None:
+    auth_state = _schema.auth_state
+    state = _get_or_create_state(engine)
+    attempts = state["failed_attempts"] + 1
+    values = {"failed_attempts": attempts, "updated_at": func.now()}
+    if attempts >= _LOCKOUT_THRESHOLD:
+        values["locked_until"] = _now_dt(now) + timedelta(seconds=_LOCKOUT_SECONDS)
+    with engine.begin() as conn:
+        conn.execute(auth_state.update().where(auth_state.c.id == 1).values(**values))

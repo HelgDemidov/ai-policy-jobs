@@ -233,6 +233,16 @@ def test_login_correct_password_sets_cookie_that_authenticates(live_servers):
     assert postings_resp.json()["total"] == 1
 
 
+def test_login_locks_out_after_repeated_failures_even_for_the_right_password(live_servers):
+    urls, _ = live_servers
+    for _ in range(_auth._LOCKOUT_THRESHOLD):
+        resp = requests.post(urls["login"], json={"password": "wrong"})
+        assert resp.status_code == 401
+
+    locked_resp = requests.post(urls["login"], json={"password": SITE_PASSWORD})
+    assert locked_resp.status_code == 429
+
+
 def test_logout_requires_auth(live_servers):
     urls, _ = live_servers
     resp = requests.post(urls["logout"])
