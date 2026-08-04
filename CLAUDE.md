@@ -19,7 +19,6 @@ Employment: full-time preferred, part-time also fine. Languages: fluent English 
 - **`docs/backlog/BACKLOG.md`** — status by tier, filtering methodology, plan, decision history and rejected options. Read here for detail, not this file.
 - **`docs/ats-aggregator-sweep/notes.md`** — track 1: ATS-platform sweep (Lever/Greenhouse/Personio) for shortlist orgs.
 - **`docs/job-aggregator-landscape/notes.md`** — knowledge update on query-centric job aggregators (JobSpy, RemoteOK, Himalayas, Adzuna) — shift from org-centric to query-centric approach.
-- **`artifacts/think-tank-shortlist.html`** — canonical org shortlist artifact (also published as a Claude Artifact — republish with the same `url` on update, to avoid minting new links).
 - **`docs/tech_specs/query-connectors/spec.md`** — spec for query-centric connectors (Himalayas/Adzuna/JobSpy), a second family complementing org-centric ATS. Status: implemented.
 - **`docs/tech_specs/triage-and-autonomy/spec.md`** — spec for LLM relevance triage, run reliability, and unattended scheduling. Status: run reliability + scheduling (systemd timer, 00:00 UTC) implemented 2026-07-26; LLM relevance triage remains a draft.
 - **`docs/tech_specs/postings-schema-hardening/spec.md`** — spec for `postings` schema robustness: two-layer input validation (connector boundary + `store.py` backstop against `sqlite3.IntegrityError`), STRICT + `CHECK(status)` migration, cross-source `dedup_key` symmetry between the ATS and search storage families. Status: implemented 2026-08-04.
