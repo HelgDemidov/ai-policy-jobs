@@ -1,5 +1,14 @@
 const STATUS_OPTIONS = ["new", "reviewed", "applied", "rejected", "likely_closed"];
 const TIER_CLASS = { A: "tier-a", B: "tier-b", C: "tier-c" };
+const PAGE_SIZE = 60;
+// Ceiling for the one-time, unfiltered fetch used only to discover which
+// tier/org values exist (populates the filter checkboxes/select) — not
+// used for card rendering, which is always paginated. Generous headroom
+// over the project's own ~1000-row growth target (spec criterion 3); if
+// the real count ever exceeds this, newly-discovered orgs simply won't
+// appear as filter options until this ceiling is raised — an accepted,
+// documented limit, not a silent one.
+const FACET_SIZE = 2000;
 
 // null until the first response tells us what's actually in the data —
 // mirrors app.py's `tiers = sorted(df["tier"].dropna().unique())` /
@@ -8,12 +17,11 @@ const TIER_CLASS = { A: "tier-a", B: "tier-b", C: "tier-c" };
 let knownTiers = null;
 let knownOrgs = null;
 
-// Full unfiltered dataset, fetched once (page load / "Refresh from DB").
-// All filter-widget changes re-filter this in memory instead of re-fetching
-// — live-measured 2026-08-04: server-side processing is ~0.15s, but the
-// per-request payload (full description text for every posting) took
-// 2-15s to transfer, and the old code re-fetched it on every filter click.
-let allPostings = [];
+// Pagination state for the currently-loaded filter set — reset to page 1
+// whenever a filter changes, advanced by "Load more".
+let currentPage = 1;
+let currentTotal = 0;
+let loadedCount = 0;
 
 function debounce(fn, delayMs) {
   let timer;
@@ -32,7 +40,7 @@ function currentFilters() {
   // Omit tier/org entirely until the checkboxes/select exist (bootstrap:
   // first call has no filter UI yet) — an omitted param means "no filter
   // on this axis" server-side, an explicit-but-empty list means "filter to
-  // nothing" (see web/api/_logic.py). Once populated, always send the
+  // nothing" (see web/api/_repo.py). Once populated, always send the
   // explicit checked/selected set, even if that set is empty.
   if (knownTiers) {
     filters.tier = Array.from(
@@ -47,42 +55,28 @@ function currentFilters() {
   return filters;
 }
 
+function buildQueryString(filters, page, size) {
+  const params = new URLSearchParams();
+  if (filters.tier) filters.tier.forEach((t) => params.append("tier", t));
+  if (filters.org) filters.org.forEach((o) => params.append("org", o));
+  params.set("hide_closed", String(filters.hide_closed));
+  params.set("remote_only", String(filters.remote_only));
+  if (filters.query) params.set("query", filters.query);
+  params.set("page", String(page));
+  params.set("size", String(size));
+  return params.toString();
+}
+
 class AuthRequiredError extends Error {}
 
-// Always fetches the complete table (hide_closed=false overrides the
-// server's default) — filtering happens client-side in applyFilters, so
-// this is the only network call any filter interaction needs.
-async function fetchAllPostings() {
-  const resp = await fetch("/api/postings?hide_closed=false");
+async function fetchPostings(filters, page, size) {
+  const resp = await fetch(`/api/postings?${buildQueryString(filters, page, size)}`);
   if (resp.status === 401) {
     showLoginOverlay();
     throw new AuthRequiredError();
   }
   if (!resp.ok) throw new Error(`GET /api/postings failed: ${resp.status}`);
   return resp.json();
-}
-
-// Mirrors web/api/_logic.py's list_postings filter logic 1:1, operating on
-// the already-fetched array instead of a SQL query.
-function applyFilters(postings, filters) {
-  let result = postings;
-  if (filters.tier) result = result.filter((p) => filters.tier.includes(p.tier));
-  if (filters.org) result = result.filter((p) => filters.org.includes(p.org));
-  if (filters.hide_closed) {
-    result = result.filter((p) => !["likely_closed", "rejected"].includes(p.status));
-  }
-  if (filters.remote_only) {
-    result = result.filter((p) => (p.workplace_type || "").toLowerCase() === "remote");
-  }
-  const query = (filters.query || "").trim().toLowerCase();
-  if (query) {
-    result = result.filter(
-      (p) =>
-        (p.title || "").toLowerCase().includes(query) ||
-        (p.description || "").toLowerCase().includes(query)
-    );
-  }
-  return result;
 }
 
 function populateTierFilter(postings) {
@@ -98,7 +92,7 @@ function populateTierFilter(postings) {
     input.type = "checkbox";
     input.value = tier;
     input.checked = true;
-    input.addEventListener("change", renderFromCache);
+    input.addEventListener("change", () => loadPage(1, { append: false }));
     label.appendChild(input);
     label.append(` Tier ${tier}`);
     fieldset.appendChild(label);
@@ -120,13 +114,31 @@ function populateOrgFilter(postings) {
   });
 }
 
-function renderCards(postings) {
+// One-time, unfiltered fetch used only to discover tier/org values for the
+// filter widgets — separate from the paginated fetch used for card
+// rendering (fetchPostings/loadPage). Runs once per page load / "Refresh
+// from DB" click, not per filter interaction.
+async function loadFacets() {
+  const { items } = await fetchPostings({ hide_closed: false, remote_only: false, query: "" }, 1, FACET_SIZE);
+  populateTierFilter(items);
+  populateOrgFilter(items);
+}
+
+function updateVacancyCounter() {
+  document.getElementById("vacancy-counter").textContent =
+    loadedCount < currentTotal
+      ? `Showing ${loadedCount} of ${currentTotal} vacancies`
+      : `Current vacancies: ${currentTotal}`;
+}
+
+function renderCards(postings, { append }) {
   const grid = document.getElementById("card-grid");
   const emptyMessage = document.getElementById("empty-message");
-  document.getElementById("vacancy-counter").textContent = `Current vacancies: ${postings.length}`;
 
-  grid.innerHTML = "";
-  emptyMessage.hidden = postings.length > 0;
+  if (!append) {
+    grid.innerHTML = "";
+    emptyMessage.hidden = postings.length > 0;
+  }
   postings.forEach((p) => grid.appendChild(renderCard(p)));
 }
 
@@ -216,31 +228,38 @@ async function updateStatus(posting, selectEl, newStatus) {
       return;
     }
     // Update in-memory state directly instead of re-fetching: the write
-    // already succeeded, and Vercel Blob's read path is CDN-cached with a
-    // real propagation delay (live-verified 2026-08-04 — a GET fired
-    // immediately after a successful write still returned the pre-write
-    // status for close to a minute). Re-fetching here would show the user
-    // a stale value right after their own change appeared to do nothing.
+    // already succeeded, and Vercel Blob's read path used to be CDN-cached
+    // with a real propagation delay under the old storage backend — kept
+    // as the safer default now that Postgres is the backend too, since it
+    // avoids one extra round trip either way.
     posting.status = newStatus;
   } finally {
     selectEl.disabled = false;
   }
 }
 
-// Re-filters the already-fetched dataset and re-renders — no network call.
-// Bound to every filter widget's change/input event.
-function renderFromCache() {
-  renderCards(applyFilters(allPostings, currentFilters()));
+// Fetches one page for the current filter set and either replaces the
+// grid (append: false — a filter changed, or this is the first load) or
+// appends to it ("Load more").
+async function loadPage(page, { append }) {
+  const filters = currentFilters();
+  const { items, total } = await fetchPostings(filters, page, PAGE_SIZE);
+
+  renderCards(items, { append });
+  currentPage = page;
+  currentTotal = total;
+  loadedCount = append ? loadedCount + items.length : items.length;
+  updateVacancyCounter();
+
+  const loadMoreBtn = document.getElementById("load-more-btn");
+  loadMoreBtn.hidden = loadedCount >= currentTotal;
+
+  hideLoginOverlay();
 }
 
-// The only function that hits the network. Runs on page load and on
-// "Refresh from DB" — everything else re-filters the cached result.
 async function refresh() {
-  allPostings = await fetchAllPostings();
-  if (knownTiers === null) populateTierFilter(allPostings);
-  if (knownOrgs === null) populateOrgFilter(allPostings);
-  renderFromCache();
-  hideLoginOverlay();
+  await loadFacets();
+  await loadPage(1, { append: false });
 }
 
 function showLoginOverlay() {
@@ -274,11 +293,14 @@ document.addEventListener("DOMContentLoaded", () => {
     applyTheme(e.target.value);
   });
 
-  document.getElementById("refresh-btn").addEventListener("click", refresh);
-  document.getElementById("hide-closed").addEventListener("change", renderFromCache);
-  document.getElementById("remote-only").addEventListener("change", renderFromCache);
-  document.getElementById("org-filter").addEventListener("change", renderFromCache);
-  document.getElementById("search-input").addEventListener("input", debounce(renderFromCache, 300));
+  document.getElementById("refresh-btn").addEventListener("click", refreshOrReportError);
+  document.getElementById("load-more-btn").addEventListener("click", () => loadPage(currentPage + 1, { append: true }));
+  document.getElementById("hide-closed").addEventListener("change", () => loadPage(1, { append: false }));
+  document.getElementById("remote-only").addEventListener("change", () => loadPage(1, { append: false }));
+  document.getElementById("org-filter").addEventListener("change", () => loadPage(1, { append: false }));
+  document
+    .getElementById("search-input")
+    .addEventListener("input", debounce(() => loadPage(1, { append: false }), 300));
 
   document.getElementById("login-form").addEventListener("submit", async (e) => {
     e.preventDefault();
