@@ -5,7 +5,7 @@ rest of its batch (either family).
 
 Usage: python3 scripts/run.py [--linkedin]
 --linkedin also runs `manual: true` search specs. As of 2026-07-25 no spec is
-marked manual (LinkedIn was un-gated — see docs/BACKLOG.md), so the flag is a
+marked manual (LinkedIn was un-gated — see docs/backlog/BACKLOG.md), so the flag is a
 no-op; the mechanism is kept for gating a future source.
 """
 import argparse
@@ -15,14 +15,10 @@ from pathlib import Path
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import adzuna  # noqa: E402
-import greenhouse  # noqa: E402
-import himalayas  # noqa: E402
-import jobspy_search  # noqa: E402
-import lever  # noqa: E402
-import personio  # noqa: E402
-import query_common  # noqa: E402
 import store  # noqa: E402
+from connectors.ats import greenhouse, lever, personio  # noqa: E402
+from connectors.query import adzuna, himalayas, jobspy_search  # noqa: E402
+from connectors.query import common as query_common  # noqa: E402
 
 CONNECTORS = {"lever": lever.fetch, "greenhouse": greenhouse.fetch, "personio": personio.fetch}
 

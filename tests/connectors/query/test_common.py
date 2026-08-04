@@ -1,5 +1,5 @@
-"""Tests for the tier-derivation heuristic (scripts/query_common.py)."""
-import query_common
+"""Tests for the tier-derivation heuristic (scripts/connectors/query/common.py)."""
+from connectors.query import common as query_common
 
 
 def test_himalayas_is_always_tier_a():

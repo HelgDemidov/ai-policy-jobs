@@ -1,4 +1,4 @@
-"""Tests for the JobSpy wrapper (scripts/jobspy_search.py).
+"""Tests for the JobSpy wrapper (scripts/connectors/query/jobspy_search.py).
 
 scrape_jobs is monkeypatched everywhere — no real network/scraping in tests.
 """
@@ -6,9 +6,7 @@ import datetime
 
 import numpy as np
 import pandas as pd
-import pytest
-
-import jobspy_search
+from connectors.query import jobspy_search
 
 
 def _df(rows):

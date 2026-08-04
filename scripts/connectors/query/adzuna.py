@@ -4,7 +4,7 @@ http:// host 301-redirects, and requests won't follow that automatically
 without allow_redirects (default True, but the scheme must be https from
 the start to avoid an extra round trip — live lesson from testing).
 
-Query lesson from live testing (see docs/job-aggregator-landscape.md):
+Query lesson from live testing (see docs/job-aggregator-landscape/notes.md):
 what_phrase (exact phrase) works well for distinctive phrases like "think
 tank", but does NOT fully fix noise for short/common phrases — that's a
 config/query concern (searches.yaml), not something this connector can fix.
@@ -15,7 +15,7 @@ from pathlib import Path
 import requests
 
 API = "https://api.adzuna.com/v1/api/jobs/{country}/search/1"
-ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
+ENV_PATH = Path(__file__).resolve().parent.parent.parent.parent / ".env"
 
 
 def _load_env_credentials() -> tuple[str, str]:
@@ -44,7 +44,7 @@ def _load_env_credentials() -> tuple[str, str]:
 def fetch(spec: dict) -> list[dict]:
     app_id, app_key = _load_env_credentials()
     country = spec["country"]
-    params = {
+    params: dict[str, str | int] = {
         "app_id": app_id,
         "app_key": app_key,
         "results_per_page": 50,

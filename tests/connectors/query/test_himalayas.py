@@ -1,6 +1,5 @@
-"""Tests for the Himalayas query-centric connector (scripts/himalayas.py)."""
-import himalayas
-import requests_mock
+"""Tests for the Himalayas query-centric connector (scripts/connectors/query/himalayas.py)."""
+from connectors.query import himalayas
 
 FULL_JOB = {
     "guid": "https://himalayas.app/companies/aptive/jobs/policy-analyst",

@@ -1,8 +1,8 @@
-"""Tests for the Lever ATS connector (scripts/lever.py)."""
+"""Tests for the Lever ATS connector (scripts/connectors/ats/lever.py)."""
 from datetime import datetime, timezone
 
-import lever
 import requests_mock
+from connectors.ats import lever
 
 CREATED_AT = int(datetime(2024, 3, 15, 12, 0, tzinfo=timezone.utc).timestamp() * 1000)
 

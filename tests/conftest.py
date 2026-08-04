@@ -1,6 +1,7 @@
-"""Shared test setup: make scripts/ importable as plain modules, matching how
-app.py and the scripts themselves resolve their own imports (sys.path insert,
-not a package)."""
+"""Shared test setup: put scripts/ on sys.path, matching how app.py and the
+scripts themselves resolve their own imports. run.py/store.py import as plain
+sibling modules; scripts/connectors/{ats,query}/ import as subpackages of
+that same sys.path root (e.g. `from connectors.ats import lever`)."""
 import sys
 from pathlib import Path
 

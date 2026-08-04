@@ -4,7 +4,7 @@ the python-jobspy scraping library (github.com/speedyapply/JobSpy).
 Two separate fetch functions, not one parameterized by site, so each gets
 its own `source` value in the DB — LinkedIn and Indeed have very different
 reliability/relevance profiles in live testing (see
-docs/job-aggregator-landscape.md): LinkedIn found the single best match of
+docs/job-aggregator-landscape/notes.md): LinkedIn found the single best match of
 any source tested (RAND Europe).
 
 LinkedIn was gated behind run.py's `--linkedin` flag until 2026-07-25 over

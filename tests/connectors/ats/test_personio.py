@@ -1,6 +1,6 @@
-"""Tests for the Personio ATS connector (scripts/personio.py)."""
-import personio
+"""Tests for the Personio ATS connector (scripts/connectors/ats/personio.py)."""
 import requests_mock
+from connectors.ats import personio
 
 SAMPLE_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <workzag-jobs>

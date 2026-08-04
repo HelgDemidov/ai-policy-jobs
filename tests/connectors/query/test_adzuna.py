@@ -1,8 +1,7 @@
-"""Tests for the Adzuna query-centric connector (scripts/adzuna.py)."""
+"""Tests for the Adzuna query-centric connector (scripts/connectors/query/adzuna.py)."""
 import pytest
 import requests_mock
-
-import adzuna
+from connectors.query import adzuna
 
 FULL_JOB = {
     "id": "5810920346",
