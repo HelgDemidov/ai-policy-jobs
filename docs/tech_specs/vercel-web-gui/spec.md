@@ -82,8 +82,8 @@ Vercel Password Protection для production-деплоя требует пла�
 
 ## Чек-лист реализации
 
-- [ ] `scripts/blob_sync.py` + тесты (монкипатч `subprocess`)
-- [ ] врезка sync в `run.py` `__main__`
+- [x] `scripts/blob_sync.py` + тесты (монкипатч `subprocess`)
+- [x] врезка sync в `run.py` `__main__`
 - [ ] `web/api/_logic.py` (`list_postings`, `set_status`) + тесты
 - [ ] `web/api/postings.py`, `web/api/status.py` (тонкие Vercel-хендлеры)
 - [ ] `web/public/index.html` + `style.css` + `app.js` — карточки/фильтры/тема/статус

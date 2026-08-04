@@ -15,6 +15,7 @@ from pathlib import Path
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import blob_sync  # noqa: E402
 import store  # noqa: E402
 from connectors.ats import greenhouse, lever, personio  # noqa: E402
 from connectors.query import adzuna, himalayas, jobspy_search  # noqa: E402
@@ -122,4 +123,7 @@ if __name__ == "__main__":
         help="also run manual:true search specs (no spec is marked manual right now — kept for future gating)",
     )
     args = parser.parse_args()
-    sys.exit(main(run_linkedin=args.linkedin))
+    blob_sync.download(store.DB_PATH)  # pull state, including status writes from the web GUI
+    exit_code = main(run_linkedin=args.linkedin)
+    blob_sync.upload(store.DB_PATH)  # publish this run's result
+    sys.exit(exit_code)
