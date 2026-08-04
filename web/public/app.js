@@ -260,6 +260,17 @@ async function refresh() {
   await loadPage(1, { append: false });
 }
 
+// Best-effort: show the login overlay either way. Even if the request
+// itself fails (offline, etc.), the user still ends up back at the
+// password prompt rather than stuck on a stale, now-untrustworthy view.
+async function logout() {
+  try {
+    await fetch("/api/logout", { method: "POST" });
+  } finally {
+    showLoginOverlay();
+  }
+}
+
 function showLoginOverlay() {
   document.getElementById("app").hidden = true;
   document.getElementById("login-overlay").hidden = false;
@@ -292,6 +303,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("refresh-btn").addEventListener("click", refreshOrReportError);
+  document.getElementById("logout-btn").addEventListener("click", logout);
   document.getElementById("load-more-btn").addEventListener("click", () => loadPage(currentPage + 1, { append: true }));
   document.getElementById("hide-closed").addEventListener("change", () => loadPage(1, { append: false }));
   document.getElementById("remote-only").addEventListener("change", () => loadPage(1, { append: false }));
