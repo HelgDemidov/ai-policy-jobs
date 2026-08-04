@@ -1,11 +1,11 @@
 """POST /api/status — {"source": ..., "ats_id": ..., "status": ...} body.
-Updates postings.status and republishes the blob with an ETag-guarded write
-(spec §3) so a concurrent run.py sync can't be silently clobbered.
+Updates postings.status directly in Postgres via a plain transactional
+UPDATE — no ETag/blob-swap machinery needed anymore (Postgres gives
+atomicity for free; the old file-swap approach had to earn it manually,
+see docs/tech_specs/web-postgres-migration/spec.md §4).
 """
 import json
-import sqlite3
 import sys
-import tempfile
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 
@@ -13,9 +13,7 @@ from pathlib import Path
 # put an api/*.py file's own directory on sys.path.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _auth  # noqa: E402
-import _blob  # noqa: E402
-import _logic  # noqa: E402
-import requests  # noqa: E402
+import _repo  # noqa: E402
 from _http import write_json  # noqa: E402
 
 
@@ -35,28 +33,10 @@ class handler(BaseHTTPRequestHandler):
         source = payload.get("source")
         ats_id = payload.get("ats_id")
         new_status = payload.get("status")
-        if not source or not ats_id or new_status not in _logic.STATUS_VALUES:
+        if not source or not ats_id or new_status not in _repo.STATUS_VALUES:
             write_json(self, 400, {"error": "source, ats_id, and a valid status are required"})
             return
 
-        db_bytes, etag = _blob.download_with_etag()
-        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
-            f.write(db_bytes)
-            tmp_path = Path(f.name)
-
-        try:
-            conn = sqlite3.connect(tmp_path)
-            _logic.set_status(conn, source, ats_id, new_status)
-            conn.close()
-
-            try:
-                _blob.upload(tmp_path.read_bytes(), if_match=etag)
-            except requests.HTTPError as exc:
-                if exc.response is not None and exc.response.status_code == 412:
-                    write_json(self, 409, {"error": "jobs.db changed concurrently — try again"})
-                    return
-                raise
-        finally:
-            tmp_path.unlink(missing_ok=True)
+        _repo.set_status(_repo.get_engine(), source, ats_id, new_status)
 
         write_json(self, 200, {"ok": True})
