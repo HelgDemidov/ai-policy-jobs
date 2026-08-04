@@ -1,6 +1,6 @@
 """Local card-view browser for tracked job postings.
 
-Run with: .venv/bin/streamlit run app.py
+Run with: .venv/bin/streamlit run app/app.py
 Reads scripts/store.py's SQLite DB directly — read-only except for the
 status field, which cards write back to via a selectbox (mark
 reviewed/applied/rejected without leaving the page).
@@ -12,7 +12,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-sys.path.insert(0, str(Path(__file__).resolve().parent / "scripts"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 from store import DB_PATH  # noqa: E402
 
 STATUS_OPTIONS = ["new", "reviewed", "applied", "rejected", "likely_closed"]
