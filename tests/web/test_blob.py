@@ -35,6 +35,22 @@ def test_download_with_etag_returns_content_and_etag(requests_mock):
     assert etag == '"abc123"'
 
 
+def test_download_with_etag_strips_weak_validator_prefix(requests_mock):
+    """Live-verified 2026-08-04: GET responses for jobs.db come back with a
+    weak ETag (W/"...", likely from gzip transcoding on this large a file),
+    which never satisfies If-Match's strong comparison (RFC 7232) — every
+    conditional write failed with 412/409 until this was stripped."""
+    requests_mock.get(
+        "https://tzxwwo2y42v4il6x.private.blob.vercel-storage.com/jobs.db",
+        content=b"db-bytes",
+        headers={"etag": 'W/"abc123"'},
+    )
+
+    _, etag = _blob.download_with_etag()
+
+    assert etag == '"abc123"'
+
+
 def test_upload_sends_correct_headers_and_pathname(requests_mock):
     requests_mock.put("https://vercel.com/api/blob", json={"pathname": "jobs.db"})
 

@@ -2,15 +2,23 @@
 Thin Vercel handler — all filtering logic lives in _logic.list_postings.
 """
 import sqlite3
+import sys
 import tempfile
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-import _auth
-import _blob
-import _logic
-from _http import write_json
+# Vercel's Python runtime loads each api/*.py file as an isolated entrypoint
+# module (importlib spec_from_file_location on that one file) — it does NOT
+# put the file's own directory on sys.path, so bare `import _auth` etc.
+# 404s with ModuleNotFoundError at cold start (live-verified 2026-08-04:
+# reproduced locally with the same importlib call Vercel's loader uses).
+# Same fix pattern as scripts/run.py and app/app.py's sys.path inserts.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _auth  # noqa: E402
+import _blob  # noqa: E402
+import _logic  # noqa: E402
+from _http import write_json  # noqa: E402
 
 
 def _parse_filters(query: dict) -> dict:
