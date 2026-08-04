@@ -42,9 +42,9 @@ scripts/adzuna.py      — query-centric коннектор Adzuna (what_phrase/
 scripts/jobspy_search.py — query-centric обёртка над python-jobspy (LinkedIn/Indeed)
 scripts/query_common.py — derive_tier: тир-эвристика для query-centric находок
 scripts/store.py       — SQLite-схема + upsert (ATS-семья с реконсиляцией + search-семья без неё, см. ниже)
-scripts/run.py         — оркестратор: ATS-цикл (orgs.yaml) + search-цикл (searches.yaml), --linkedin
-orgs.yaml              — конфиг организаций для ATS-коннекторов: {org, tier, ats, slug}
-searches.yaml          — конфиг поисковых запросов для query-centric коннекторов: {id, source, query/phrase, ...}
+scripts/run.py         — оркестратор: ATS-цикл (config/orgs.yaml) + search-цикл (config/searches.yaml), --linkedin
+config/orgs.yaml       — конфиг организаций для ATS-коннекторов: {org, tier, ats, slug}
+config/searches.yaml   — конфиг поисковых запросов для query-centric коннекторов: {id, source, query/phrase, ...}
 data/jobs.db           — SQLite-хранилище (gitignored, генерируется)
 ```
 
