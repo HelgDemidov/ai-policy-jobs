@@ -10,6 +10,7 @@ DATABASE_URL — no live network, no real Postgres, no live site touched
 import threading
 from http.server import HTTPServer
 
+import _auth
 import _repo
 import _schema
 import facets
@@ -74,8 +75,12 @@ def _insert(engine, ats_id, **overrides):
         conn.execute(_schema.postings.insert(), row)
 
 
-def _auth_cookie():
-    return {"Cookie": f"site_auth={SITE_PASSWORD}"}
+def _auth_cookie(engine):
+    """A real issued token, not the literal password — the pre-hardening
+    shortcut (`site_auth=<password>`) is deliberately rejected now (spec
+    web-auth-hardening §1), so tests authenticate the same way a real
+    client does: via a token _auth.issue_token actually produces."""
+    return {"Cookie": f"site_auth={_auth.issue_token(engine)}"}
 
 
 def test_postings_requires_auth(live_servers):
@@ -89,7 +94,7 @@ def test_postings_returns_paginated_shape(live_servers):
     _insert(engine, "1")
     _insert(engine, "2")
 
-    resp = requests.get(urls["postings"], headers=_auth_cookie())
+    resp = requests.get(urls["postings"], headers=_auth_cookie(engine))
 
     assert resp.status_code == 200
     body = resp.json()
@@ -104,7 +109,7 @@ def test_postings_applies_query_string_filters(live_servers):
     _insert(engine, "1", tier="A")
     _insert(engine, "2", tier="B")
 
-    resp = requests.get(urls["postings"], headers=_auth_cookie(), params={"tier": "A"})
+    resp = requests.get(urls["postings"], headers=_auth_cookie(engine), params={"tier": "A"})
 
     body = resp.json()
     assert body["total"] == 1
@@ -116,7 +121,7 @@ def test_postings_pagination_params_are_parsed(live_servers):
     for i in range(3):
         _insert(engine, str(i))
 
-    resp = requests.get(urls["postings"], headers=_auth_cookie(), params={"page": "1", "size": "2"})
+    resp = requests.get(urls["postings"], headers=_auth_cookie(engine), params={"page": "1", "size": "2"})
 
     body = resp.json()
     assert body["size"] == 2
@@ -125,8 +130,8 @@ def test_postings_pagination_params_are_parsed(live_servers):
 
 
 def test_postings_size_is_capped_at_max(live_servers):
-    urls, _ = live_servers
-    resp = requests.get(urls["postings"], headers=_auth_cookie(), params={"size": "99999"})
+    urls, engine = live_servers
+    resp = requests.get(urls["postings"], headers=_auth_cookie(engine), params={"size": "99999"})
     assert resp.json()["size"] == postings.MAX_SIZE
 
 
@@ -146,7 +151,7 @@ def test_facets_returns_distinct_values_not_a_capped_page(live_servers):
     for i in range(300):  # comfortably past postings.py's old, since-removed 200/2000 caps
         _insert(engine, str(i), tier="A", org=f"Org {i}")
 
-    resp = requests.get(urls["facets"], headers=_auth_cookie())
+    resp = requests.get(urls["facets"], headers=_auth_cookie(engine))
 
     assert resp.status_code == 200
     body = resp.json()
@@ -165,13 +170,13 @@ def test_status_updates_and_is_visible_via_postings(live_servers):
     _insert(engine, "1", source="lever", status="new")
 
     resp = requests.post(
-        urls["status"], headers=_auth_cookie(),
+        urls["status"], headers=_auth_cookie(engine),
         json={"source": "lever", "ats_id": "1", "status": "applied"},
     )
     assert resp.status_code == 200
     assert resp.json() == {"ok": True}
 
-    listed = requests.get(urls["postings"], headers=_auth_cookie()).json()
+    listed = requests.get(urls["postings"], headers=_auth_cookie(engine)).json()
     assert listed["items"][0]["status"] == "applied"
 
 
@@ -180,19 +185,19 @@ def test_status_rejects_invalid_status_value(live_servers):
     _insert(engine, "1", source="lever", status="new")
 
     resp = requests.post(
-        urls["status"], headers=_auth_cookie(),
+        urls["status"], headers=_auth_cookie(engine),
         json={"source": "lever", "ats_id": "1", "status": "not-a-real-status"},
     )
 
     assert resp.status_code == 400
-    listed = requests.get(urls["postings"], headers=_auth_cookie()).json()
+    listed = requests.get(urls["postings"], headers=_auth_cookie(engine)).json()
     assert listed["items"][0]["status"] == "new"  # unchanged
 
 
 def test_status_rejects_malformed_json_body(live_servers):
-    urls, _ = live_servers
+    urls, engine = live_servers
     resp = requests.post(
-        urls["status"], headers={**_auth_cookie(), "Content-Type": "application/json"},
+        urls["status"], headers={**_auth_cookie(engine), "Content-Type": "application/json"},
         data="not json",
     )
     assert resp.status_code == 400
@@ -209,14 +214,18 @@ def test_login_correct_password_sets_cookie_that_authenticates(live_servers):
     correctly refuses to resend it over this test server's plain HTTP
     (matching real browser behavior) — extracting the value directly to
     verify what actually matters here: that the *value* login.py issues is
-    the one postings.py accepts, independent of transport security."""
+    the one postings.py accepts, independent of transport security. Also
+    the core claim of spec web-auth-hardening §1 — the cookie must NOT be
+    the literal password, so a leaked cookie doesn't equal a leaked
+    credential."""
     urls, engine = live_servers
     _insert(engine, "1")
 
     login_resp = requests.post(urls["login"], json={"password": SITE_PASSWORD})
     assert login_resp.status_code == 200
-    assert login_resp.cookies["site_auth"] == SITE_PASSWORD
+    token = login_resp.cookies["site_auth"]
+    assert token != SITE_PASSWORD
 
-    postings_resp = requests.get(urls["postings"], headers={"Cookie": f"site_auth={login_resp.cookies['site_auth']}"})
+    postings_resp = requests.get(urls["postings"], headers={"Cookie": f"site_auth={token}"})
     assert postings_resp.status_code == 200
     assert postings_resp.json()["total"] == 1
