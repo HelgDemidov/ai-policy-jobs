@@ -160,6 +160,15 @@ def upsert_postings(conn: sqlite3.Connection, org: str, tier: str | None, source
             (source, p["ats_id"]),
         ).fetchone()
         if row is None:
+            dedup_key = _normalize_dedup_key(org, p["title"])
+            dup = conn.execute("SELECT id FROM postings WHERE dedup_key=?", (dedup_key,)).fetchone()
+            if dup is not None:
+                # Same posting, already known from a different source — touch
+                # last_seen, don't insert a duplicate row (symmetric with
+                # upsert_search_postings' cross-source dedup).
+                conn.execute("UPDATE postings SET last_seen=? WHERE id=?", (now, dup[0]))
+                continue
+
             try:
                 conn.execute(
                     """INSERT INTO postings
@@ -169,7 +178,7 @@ def upsert_postings(conn: sqlite3.Connection, org: str, tier: str | None, source
                     (org, tier, source, p["ats_id"], p["title"], p.get("location"),
                      p.get("workplace_type"), p.get("team"), p.get("commitment"),
                      p["url"], p.get("description"), p.get("posted_at"), now, now,
-                     _normalize_dedup_key(org, p["title"])),
+                     dedup_key),
                 )
             except sqlite3.IntegrityError as exc:
                 print(f"  ! {org} ({source}): skipping invalid posting {p.get('ats_id')!r} — {exc}")

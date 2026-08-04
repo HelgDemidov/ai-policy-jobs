@@ -13,7 +13,7 @@ import store
 def _posting(ats_id, **overrides):
     base = {
         "ats_id": ats_id,
-        "title": "Some Role",
+        "title": f"Some Role {ats_id}",  # distinct by default — dedup_key is org+title
         "location": "Remote",
         "workplace_type": "remote",
         "team": None,
@@ -344,6 +344,43 @@ def test_search_postings_dedup_across_sources_by_org_and_title(tmp_path):
     # The original ATS-family row is the one that persists, now touched.
     row = conn.execute("SELECT source, ats_id FROM postings").fetchone()
     assert row == ("lever", "l1")
+
+
+def test_upsert_postings_dedup_matches_existing_row_from_other_source(tmp_path):
+    # Symmetric case: a search-family row already exists, then the ATS family
+    # finds "the same" posting — upsert_postings must not insert a duplicate
+    # (mirrors the search-family behavior above).
+    conn = store.open_db(tmp_path / "jobs.db")
+    store.upsert_search_postings(
+        conn, "himalayas", [_search_posting("h1", "RAND Europe", title="Research Analyst")]
+    )
+
+    new_count = store.upsert_postings(
+        conn, "RAND Europe", "B", "lever", [_posting("l1", title="Research Analyst")]
+    )
+
+    assert new_count == 0
+    count = conn.execute("SELECT COUNT(*) FROM postings").fetchone()[0]
+    assert count == 1
+    row = conn.execute("SELECT source, ats_id FROM postings").fetchone()
+    assert row == ("himalayas", "h1")
+
+
+def test_upsert_postings_dedup_match_does_not_disrupt_reconciliation(tmp_path):
+    conn = store.open_db(tmp_path / "jobs.db")
+    store.upsert_search_postings(
+        conn, "himalayas", [_search_posting("h1", "RAND Europe", title="Research Analyst")]
+    )
+    store.upsert_postings(conn, "RAND Europe", "B", "lever", [_posting("l2", title="Other Role")])
+
+    # Next fetch: "Research Analyst" dedup-matches the himalayas row and isn't
+    # inserted as a lever row; "l2" is gone — must still reconcile normally.
+    store.upsert_postings(conn, "RAND Europe", "B", "lever", [_posting("l1", title="Research Analyst")])
+
+    lever_statuses = dict(
+        conn.execute("SELECT ats_id, status FROM postings WHERE source='lever'").fetchall()
+    )
+    assert lever_statuses == {"l2": "likely_closed"}
 
 
 def test_search_postings_no_reconciliation_on_empty_batch(tmp_path):
