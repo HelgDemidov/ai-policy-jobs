@@ -1,9 +1,8 @@
-"""GET /api/postings?tier=A&tier=B&org=...&hide_closed=true&remote_only=false&query=...
-Thin Vercel handler — all filtering logic lives in _logic.list_postings.
+"""GET /api/postings?tier=A&tier=B&org=...&hide_closed=true&remote_only=false&query=...&page=1&size=60
+Thin Vercel handler — all filtering/pagination logic lives in
+_repo.list_postings (docs/tech_specs/web-postgres-migration/spec.md §4).
 """
-import sqlite3
 import sys
-import tempfile
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -13,12 +12,13 @@ from urllib.parse import parse_qs, urlparse
 # put the file's own directory on sys.path, so bare `import _auth` etc.
 # 404s with ModuleNotFoundError at cold start (live-verified 2026-08-04:
 # reproduced locally with the same importlib call Vercel's loader uses).
-# Same fix pattern as scripts/run.py and app/app.py's sys.path inserts.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _auth  # noqa: E402
-import _blob  # noqa: E402
-import _logic  # noqa: E402
+import _repo  # noqa: E402
 from _http import write_json  # noqa: E402
+
+DEFAULT_SIZE = 60
+MAX_SIZE = 200
 
 
 def _parse_filters(query: dict) -> dict:
@@ -35,24 +35,28 @@ def _parse_filters(query: dict) -> dict:
     return filters
 
 
+def _parse_pagination(query: dict) -> tuple[int, int]:
+    try:
+        page = max(1, int(query.get("page", ["1"])[0]))
+    except ValueError:
+        page = 1
+    try:
+        size = int(query.get("size", [str(DEFAULT_SIZE)])[0])
+    except ValueError:
+        size = DEFAULT_SIZE
+    return page, max(1, min(size, MAX_SIZE))
+
+
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if not _auth.is_authenticated(self.headers.get("Cookie")):
             write_json(self, 401, {"error": "unauthorized"})
             return
 
-        filters = _parse_filters(parse_qs(urlparse(self.path).query))
+        query = parse_qs(urlparse(self.path).query)
+        filters = _parse_filters(query)
+        page, size = _parse_pagination(query)
 
-        db_bytes = _blob.download()
-        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
-            f.write(db_bytes)
-            tmp_path = Path(f.name)
+        items, total = _repo.list_postings(_repo.get_engine(), filters, page=page, size=size)
 
-        try:
-            conn = sqlite3.connect(tmp_path)
-            postings = _logic.list_postings(conn, filters)
-            conn.close()
-        finally:
-            tmp_path.unlink(missing_ok=True)
-
-        write_json(self, 200, postings)
+        write_json(self, 200, {"items": items, "total": total, "page": page, "size": size})
