@@ -82,13 +82,13 @@ CREATE TABLE searches (
 
 - `alembic/env.py` — `target_metadata` указывает на общий `MetaData()` из `web/api/_schema.py` (единое определение `postings`/`organizations`/`searches`, как и для тестов — см. §6). URL Postgres — `os.environ["DATABASE_URL"]` напрямую (в этом репо нет settings-синглтона, как у `scopus_search`; читать env — уже устоявшийся паттерн, см. `_auth.py`/`_blob.py`).
 - Именование — `NNNN_slug.py` последовательно с самого начала (референс сам рекомендует это в ретроспективе, вместо того как у них разъехалось между случайным hex и последовательным).
-- Пять миграций для первого раската: `0001_create_postings.py`, `0002_create_organizations.py`, `0003_create_searches.py`, `0004_add_postings_org_id.py` (только структура — колонка+FK+индекс; сам backfill `org_id` не отдельная data-миграция, а естественное следствие обычного `mirror_to_postgres` на каждом прогоне, т.к. таблица полностью перезаливается), `0005_add_search_vector.py` — raw `op.execute` (генерируемая колонка — не выразима через обычный ORM/Core `Column`, тот же паттерн, что у референса для GiST-индексов).
+**Две миграции, не пять — решение принято при реализации, не в этом черновике.** Изначальный план дробил раскат на `0001_create_postings`/`0002_create_organizations`/`0003_create_searches`/`0004_add_postings_org_id` — но это симулировало бы органическую историю, которой не было: `_schema.py`'s `postings` уже содержит `org_id` с самого начала (не добавлен позже через `ALTER`), а все три таблицы деплоятся в одном релизе, не в четырёх последовательных. У референса (`scopus_search_code`) миграция-на-таблицу отражает реальный факт «эта таблица добавлена в отдельном спринте» — у нас такого факта нет, изображать его было бы лишней церемонией. Итог: `0001_initial_schema.py` (все три таблицы через `alembic revision --autogenerate` против настоящей пустой Neon-БД — гарантирует точное совпадение с `_schema.py`, а не ручной DDL, рискующий разъехаться), `0002_add_search_vector.py` — raw `op.execute` (генерируемая колонка не выразима через обычный Core `Column`, тот же паттерн, что у референса для GiST-индексов).
 - `alembic upgrade head` — вызывается из `scripts/postgres_sync.py` (программно, `alembic.config.Config` + `alembic.command.upgrade`, не подпроцессом) в начале каждого прогона `run.py` — идемпотентно, тот же принцип, что у референса («safe on every deploy»), адаптированный под наш деплой без Docker-энтрипойнта.
 - Тесты Alembic не используют — как и у референса, `tests/web/test_repo.py` строит схему прямо из `_schema.py`'s `MetaData.create_all()` против SQLite-in-memory, минуя миграции полностью (быстрее и герметичнее). Alembic — единственный источник правды схемы **для Postgres**, `_schema.py`'s `MetaData` — единственный источник правды **для тестов и для `target_metadata`**; они обязаны совпадать, что и обеспечивает Alembic autogenerate при последующих правках схемы.
 
 ## 5. Полнотекстовый поиск
 
-`search_vector` — генерируемая колонка на `postings` (только в Postgres-миграции `0005`, НЕ в переносимом `_schema.py`'s `Table` — `tsvector` не существует в SQLite, и это единственная сознательная точка, где код перестаёт быть диалект-независимым):
+`search_vector` — генерируемая колонка на `postings` (только в Postgres-миграции `0002`, НЕ в переносимом `_schema.py`'s `Table` — `tsvector` не существует в SQLite, и это единственная сознательная точка, где код перестаёт быть диалект-независимым):
 
 ```sql
 ALTER TABLE postings ADD COLUMN search_vector tsvector
@@ -165,7 +165,7 @@ else:
 1. `chore: add sqlalchemy + psycopg[binary] + alembic to web/requirements.txt and requirements.txt`
 2. `test: add integration tier — pytest marker, CI postgres service job, tests/integration/ scaffold` (теперь может писать реальный smoke-тест на подключение — psycopg уже доступен)
 3. `feat(web): add _schema.py — postings/organizations/searches Table definitions`
-4. `feat(db): add alembic — env.py wired to _schema.py metadata, migrations 0001-0005` (+ `tests/integration/test_migrations.py` наполняется здесь же, не в конце)
+4. `feat(db): add alembic — env.py wired to _schema.py metadata, migrations 0001-0002` (+ `tests/integration/test_migrations.py` наполняется здесь же, не в конце)
 5. `feat(web): add _repo.py — filtering, pagination, org_id join, FTS dialect branch` (+ `tests/web/test_repo.py`)
 6. `feat(scripts): add postgres_sync.py (ensure_schema/pull_statuses/sync_organizations/sync_searches/mirror_to_postgres), wire into run.py __main__` (+ `tests/test_postgres_sync.py` и `tests/test_run_pipeline.py`)
 7. **[ручной шаг, не коммит]** — `.venv/bin/python scripts/run.py` локально: прогоняет `alembic upgrade head`, впервые наполняет все 3 таблицы в Postgres
@@ -178,8 +178,8 @@ else:
 
 - [x] `pyproject.toml` — `integration`-маркер зарегистрирован, `addopts = "-m 'not integration'"`; `tests/integration/` каркас; `.github/workflows/tests.yml` — новый `test-integration`-джоб с Postgres service-контейнером (`fe7a922`)
 - [x] `web/api/_schema.py` — `postings`/`organizations`/`searches` Table-определения, индексы
-- [ ] `alembic/env.py` + `alembic.ini`, миграции `0001`-`0005` (см. §4)
-- [ ] `tests/integration/test_migrations.py` — миграции применяются на реальном Postgres, схема совпадает с `_schema.py`'s metadata, FTS-ранжирование проверено
+- [x] `alembic/env.py` + `alembic.ini`, миграции `0001`-`0002` (см. §4) — `include_object`-исключение для `search_vector`/`ix_postings_search_vector` добавлено по образцу референса, `alembic check` живьём подтверждает отсутствие дрейфа
+- [x] `tests/integration/test_migrations.py` — миграции применяются на реальном Postgres (Neon, `quiet-sea-26110140`), схема совпадает с `_schema.py`'s metadata, FTS-ранжирование проверено вживую (title-match 0.995 > description-only-match 0.366)
 - [ ] `web/api/_repo.py` — `_build_where` (с FTS-веткой), `list_postings`, `set_status`, `get_engine`
 - [ ] `tests/web/test_repo.py` — включая org_id-резолюцию и LIKE-fallback ветку полнотекстового поиска
 - [ ] `web/api/postings.py`/`status.py` переписаны как тонкие обработчики
