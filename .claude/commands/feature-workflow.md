@@ -37,7 +37,7 @@ Do not start building with open questions outstanding — in this project they r
 
 The commit plan is already in the spec. Re-read it against the current code (it was written earlier; the repo may have moved) and present only the **deltas** for approval — not the whole plan again. If Step 2's answers invalidate a planned commit, say so now rather than discovering it mid-build.
 
-**Branch: default to `main`.** This repo has no PR flow and linear history — a feature branch with nothing to merge into is ceremony. (A private GitHub remote exists purely as an off-machine backup, not for merging.) `git revert` is the rollback path. Create a branch only if the user asks for an escape hatch.
+**Branch: always a feature branch, unconditionally (curator's 2026-08-05 decision).** Create `feature/<slug>` off `main` before Step 4's first commit; every commit in this workflow lands there, never directly on `main`. This holds regardless of how small the spec turns out to be — the size-based main-vs-branch split documented in `CLAUDE.md` governs other work, not `/feature-workflow`, which always branches and opens a PR at the end (Step 7).
 
 ## Step 4 — Implement, commit by commit
 
@@ -85,4 +85,4 @@ Once every planned commit has landed:
 4. Update `docs/backlog/BACKLOG.md`: status of the originating item plus a pointer to the spec; and `CLAUDE.md` if the spec changed how the tool is run.
 5. Commit the closure as `docs: ...`.
 
-Push `main` to `origin` (private GitHub backup remote, added 2026-08-04) — no PR, it's a mirror, not a collaboration repo. Report: commits landed, final test result, what diverged from the plan, and what the spec explicitly left out of scope.
+Push the feature branch to `origin` and open a PR with `gh pr create` (title from the spec's name; body summarizing what shipped, pointing at the spec's `## Что разошлось с планом`). Do not merge it — curator reviews and merges. Report: commits landed, final test result, what diverged from the plan, what the spec explicitly left out of scope, and the PR URL.

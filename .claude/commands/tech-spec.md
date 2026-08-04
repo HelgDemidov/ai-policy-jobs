@@ -2,7 +2,7 @@ Turn a feature/change request into a structured spec at `docs/tech_specs/<slug>/
 
 Take the task description from the user's message (and any command args) as the primary input. Everything below is a DEFAULT — an explicit instruction in that message overrides it.
 
-Adapted from G2AI_ME's `/tech-spec`, stripped to what this repo actually has: no CI, no coverage gate, no PR flow, flat `docs/tech_specs/` (no functional blocks), `docs/` tracked rather than gitignored. A private GitHub remote (`github.com/HelgDemidov/ai-policy-jobs`) exists since 2026-08-04 purely as an off-machine backup — it does not add CI/Actions or a PR flow.
+Adapted from G2AI_ME's `/tech-spec`, stripped to what this repo actually has: no CI coverage gate, flat `docs/tech_specs/` (no functional blocks), `docs/` tracked rather than gitignored. A private GitHub remote (`github.com/HelgDemidov/ai-policy-jobs`) exists since 2026-08-04; a real branch+PR flow exists since 2026-08-05 for larger work (`CLAUDE.md`) — this command's own output is a single spec-draft commit, small enough to stay on the direct-to-main side of that rule (see the placement note at the end of this file).
 
 ## Cross-cutting principle
 
@@ -84,7 +84,7 @@ Section headers stay in Russian, matching the existing specs (`docs/tech_specs/*
 
 Write to `docs/tech_specs/<kebab-slug>/spec.md`. Slug derived from the feature itself — lowercase ASCII, no spaces — not a copy of the user's raw phrasing.
 
-`docs/` is tracked in this repo, so the spec is a real file in git. **No feature branch by default**: no PR flow here (the GitHub remote is a private backup mirror, not a collaboration repo) — work lands on `main`. Do not commit unless the user asks.
+`docs/` is tracked in this repo, so the spec is a real file in git. **No feature branch by default**: writing a spec is one commit, which fits the direct-to-main side of the size-based branching rule (`CLAUDE.md`) — `/feature-workflow`'s always-branch-and-PR rule applies once implementation starts, not here. Do not commit unless the user asks.
 
 If the spec grew out of a `docs/backlog/BACKLOG.md` item, add a pointer line back to it there.
 
