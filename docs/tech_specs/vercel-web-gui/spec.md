@@ -47,7 +47,7 @@ blob_sync.upload(DB_PATH)     # публикуем результат прого
 
 ## 4. Доступ — shared-secret gate
 
-Vercel Password Protection для production-деплоя требует платного плана (живая проверка документации: «Password protection requires an eligible plan» — на Hobby недоступна). Оставлять GUI публично читаемым нельзя: карточки несут emigrant/citizenship-нарратив куратора и адресный список организаций по чувствительным гео (`docs/BACKLOG.md`). Решение: минимальный собственный гейт — `SITE_PASSWORD` (env var) проверяется в каждой `api/*.py`-функции по cookie, выставляемой простой login-формой в `web/public/`. Не новый сервис, ~20 строк.
+Vercel Password Protection для production-деплоя требует платного плана (живая проверка документации: «Password protection requires an eligible plan» — на Hobby недоступна). Оставлять GUI публично читаемым нельзя: карточки несут emigrant/citizenship-нарратив куратора и адресный список организаций по чувствительным гео (`docs/backlog/BACKLOG.md`). Решение: минимальный собственный гейт — `SITE_PASSWORD` (env var) проверяется в каждой `api/*.py`-функции по cookie, выставляемой простой login-формой в `web/public/`. Не новый сервис, ~20 строк.
 
 **Где хранить `SITE_PASSWORD` (закрыто):** только в Vercel Dashboard проекта `ai-policy-jobs` → Settings → Environment Variables — https://vercel.com/helgdemidovs-projects/ai-policy-jobs/settings/environment-variables (значение вбивается прямо в веб-форму, не через чат). НЕ локальный `.env` репозитория — его читают только локальные Python-скрипты (`adzuna.py`, будущий `blob_sync.py`), до Vercel-функций он не доезжает. НЕ GitHub Secrets — репозиторий с 2026-08-04 зеркалится на приватный `github.com/HelgDemidov/ai-policy-jobs`, но GitHub Actions/CI там не заводили и не планируем (деплой ручной через `vercel deploy --prod`); секреты Actions существуют только внутри workflow, которого нет.
 
@@ -76,7 +76,7 @@ Vercel Password Protection для production-деплоя требует пла�
 2. `feat(web): web/api/ — postings/status Python-функции поверх store.py` + тесты логики
 3. `feat(web): web/public/ — статическая карточная сетка, фильтры, тема (паритет с app.py)`
 4. `feat(web): shared-secret гейт доступа` + тесты
-5. `docs: BACKLOG.md/CLAUDE.md/cli_reference.md — Vercel-проект, blob-токен, команда деплоя`
+5. `docs: docs/backlog/BACKLOG.md/CLAUDE.md/cli_reference.md — Vercel-проект, blob-токен, команда деплоя`
 
 `app.py`/Streamlit в план не входит: куратор решил (2026-08-04) оставить его как есть до приёмки и обкатки нового GUI, ретайр — отдельный будущий коммит вне этого спека.
 
@@ -96,7 +96,7 @@ Vercel Password Protection для production-деплоя требует пла�
 - [ ] shared-secret гейт + тесты
 - [ ] `cd web && vercel link` (подхватывает существующий `ai-policy-jobs`, новый проект не создавать) + `vercel deploy --prod` — реальный код поверх заглушки
 - [ ] живой смок: открыть URL, проверить фильтры/статус-запись/тему в браузере
-- [ ] `docs/BACKLOG.md`, `CLAUDE.md`, `docs/user_guides/cli_reference.md` обновлены
+- [ ] `docs/backlog/BACKLOG.md`, `CLAUDE.md`, `docs/user_guides/cli_reference.md` обновлены
 
 ## Открытые вопросы
 

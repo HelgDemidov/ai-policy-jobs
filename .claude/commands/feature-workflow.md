@@ -52,7 +52,7 @@ One logical change per commit; never batch unrelated work. Conventional-commit p
 
 ## Step 5 — Hermeticity check (repo-specific, do not skip)
 
-Test hermeticity here is a **convention, not a guard**: `tests/conftest.py` contains only a Streamlit-cache-clearing fixture. Nothing structurally prevents a test from opening the live `data/jobs.db` or calling a real API. The suite stays clean because every test passes `tmp_path` explicitly and overrides `searches_path` — a new test that forgets either will silently write to production data or hammer Himalayas/Adzuna/JobSpy on every `pytest` run. This has happened once already (recorded in `docs/BACKLOG.md`).
+Test hermeticity here is a **convention, not a guard**: `tests/conftest.py` contains only a Streamlit-cache-clearing fixture. Nothing structurally prevents a test from opening the live `data/jobs.db` or calling a real API. The suite stays clean because every test passes `tmp_path` explicitly and overrides `searches_path` — a new test that forgets either will silently write to production data or hammer Himalayas/Adzuna/JobSpy on every `pytest` run. This has happened once already (recorded in `docs/backlog/BACKLOG.md`).
 
 So measure around the suite whenever a commit adds tests:
 
@@ -82,7 +82,7 @@ Once every planned commit has landed:
 1. Full `.venv/bin/pytest` one final time; report the count.
 2. Status line → `реализовано (<first-sha>..<last-sha>)`, every checklist box ticked, the commit plan annotated with the actual short hashes.
 3. **Add `## Что разошлось с планом`** — renamed helpers, a design fork resolved differently once real code appeared, a decision reversed mid-flight, a predicted consequence that actually materialized. This is what tells a future session the spec was a plan rather than a transcript. Omit only when genuinely nothing diverged.
-4. Update `docs/BACKLOG.md`: status of the originating item plus a pointer to the spec; and `CLAUDE.md` if the spec changed how the tool is run.
+4. Update `docs/backlog/BACKLOG.md`: status of the originating item plus a pointer to the spec; and `CLAUDE.md` if the spec changed how the tool is run.
 5. Commit the closure as `docs: ...`.
 
 Push `master` to `origin` (private GitHub backup remote, added 2026-08-04) — no PR, it's a mirror, not a collaboration repo. Report: commits landed, final test result, what diverged from the plan, and what the spec explicitly left out of scope.

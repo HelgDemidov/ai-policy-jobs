@@ -7,11 +7,11 @@
 # search, `linkedin_fetch_description` off) while being the highest-precision
 # source. Do NOT set `fetch_description: true` on the LinkedIn spec — that adds
 # one request per posting (~20x per run) and is where the rate-limit risk actually
-# lives. See docs/BACKLOG.md and docs/job-aggregator-landscape.md.
+# lives. See docs/backlog/BACKLOG.md and docs/job-aggregator-landscape/notes.md.
 #
 # Query phrasing is NOT interchangeable across sources — what works on one
 # (e.g. Adzuna's `think tank`) may be noise on another. See
-# docs/job-aggregator-landscape.md for the live-tested query lessons behind
+# docs/job-aggregator-landscape/notes.md for the live-tested query lessons behind
 # each entry below before adding new ones by guesswork.
 
 - id: himalayas-policy

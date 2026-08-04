@@ -11,13 +11,26 @@ cd ~/Рабочий\ стол/Projects/Dev/job-search && claude
 
 **Streamlit UI:** http://localhost:8501 (после запуска ниже; порт по умолчанию, если свободен). Никаких других сетевых адресов/серверов в проекте нет — SQLite - локальный файл, ATS/агрегаторы вызываются исходящими HTTP-запросами, входящих портов не открывают. Ключи Adzuna — `.env` в корне (не в git).
 
+## Окружение (venv, зависимости)
+
+`.venv` создаётся через `uv` (уже стоит в системе, `~/.local/bin/uv`), не bare `python3 -m venv` — живой урок из `postings-schema-hardening`: venv, пересозданный вручную, тащит зашитые абсолютные пути от переезда репозитория, `uv venv` этого не делает.
+
+```bash
+uv venv                                                     # создать/пересоздать .venv
+uv pip install -r requirements.txt -r requirements-dev.txt  # Python-зависимости + ruff/mypy/pytest
+npm install                                                  # eslint (пока не на чем линтить — web/ ещё не построен)
+```
+
 ## Запуск
 
 ```bash
 .venv/bin/python scripts/run.py            # синхронизация: все ATS + все search-источники, включая LinkedIn
 .venv/bin/python scripts/run.py --linkedin  # то же (флаг включает спеки с manual: true — сейчас таких нет)
 .venv/bin/streamlit run app/app.py          # UI на localhost:8501
-.venv/bin/pytest                            # тесты (77+, герметично)
+.venv/bin/pytest                            # тесты (104+, герметично)
+.venv/bin/ruff check .                      # линт Python (чисто)
+.venv/bin/mypy scripts app                  # типы Python — 4 известные находки в app.py (палитра тем, Collection[str]), не баг, не исправлялось в рамках гигиены
+npx eslint .                                # линт JS — пока 0 файлов под web/public/**/*.js
 ```
 
 ⚠ Не bare `python3` — `python-jobspy`/`pandas` есть только в `.venv`.
@@ -26,7 +39,7 @@ cd ~/Рабочий\ стол/Projects/Dev/job-search && claude
 ```bash
 mkdir -p ~/.streamlit && printf '[general]\nemail = ""\n' > ~/.streamlit/credentials.toml
 ```
-Уже сделано на этой машине 2026-07-25 — при живом воспроизведении обнаружилось, что файл до этого момента не существовал, хотя приложение уже запускалось и проверялось ранее (см. `docs/BACKLOG.md`, раздел про интерфейс просмотра вакансий) — вероятно, тот прогон либо прошёл через тот же креш иначе, либо файл был впоследствии удалён (например, командой `streamlit reset`). Актуально повторить этот шаг на новой машине или после `streamlit reset`.
+Уже сделано на этой машине 2026-07-25 — при живом воспроизведении обнаружилось, что файл до этого момента не существовал, хотя приложение уже запускалось и проверялось ранее (см. `docs/backlog/BACKLOG.md`, раздел про интерфейс просмотра вакансий) — вероятно, тот прогон либо прошёл через тот же креш иначе, либо файл был впоследствии удалён (например, командой `streamlit reset`). Актуально повторить этот шаг на новой машине или после `streamlit reset`.
 
 ## Автозапуск (systemd user timer, реализовано 2026-07-26)
 
@@ -86,4 +99,4 @@ sqlite3 data/jobs.db "SELECT org, title, status FROM postings WHERE status='new'
 - `config/orgs.yaml` — организации для ATS-коннекторов: `{org, tier, ats: lever|greenhouse|personio, slug}`.
 - `config/searches.yaml` — поисковые запросы: `{id, source: himalayas|adzuna|jobspy_linkedin|jobspy_indeed, query/phrase, country/location, manual: true (опц.)}`.
 
-Детали и живые уроки по каждому источнику — `docs/BACKLOG.md`, `docs/job-aggregator-landscape.md`.
+Детали и живые уроки по каждому источнику — `docs/backlog/BACKLOG.md`, `docs/job-aggregator-landscape/notes.md`.

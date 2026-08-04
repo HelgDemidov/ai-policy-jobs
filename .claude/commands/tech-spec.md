@@ -6,19 +6,19 @@ Adapted from G2AI_ME's `/tech-spec`, stripped to what this repo actually has: no
 
 ## Cross-cutting principle
 
-The governing rule of this repo (`CLAUDE.md`): **не наращивать функционал просто потому что можем.** A personal tool for one job search, not a product. A spec that introduces a mechanism where a config line, an existing column, or an existing status value would do is a defective spec — fix it before finalizing. What you *rejected* matters as much as what you propose: `## Design rationale / отвергнутые альтернативы` is where this project's value accumulates (see the same habit in `docs/BACKLOG.md` → «Отклонено»).
+The governing rule of this repo (`CLAUDE.md`): **не наращивать функционал просто потому что можем.** A personal tool for one job search, not a product. A spec that introduces a mechanism where a config line, an existing column, or an existing status value would do is a defective spec — fix it before finalizing. What you *rejected* matters as much as what you propose: `## Design rationale / отвергнутые альтернативы` is where this project's value accumulates (see the same habit in `docs/backlog/BACKLOG.md` → «Отклонено»).
 
 Grounding — apply on every pass, not just the first:
 
 - **Code.** Every path, function, column, CLI flag verified against the real repo by reading it. Never carried over from a similar-looking project or from memory of an earlier session.
 - **Data.** This repo has a live `data/jobs.db`. Any quantitative claim — how noisy a source is, how many rows a change affects, how large an LLM payload would be — must be **measured** with `.venv/bin/python` + `sqlite3`, never estimated. Read-only queries only; a spec session must not write to it.
-- **World.** Facts that move — Adzuna's free-tier quota, model pricing and API shape, a job board's query semantics, scheduler behavior — verify live before they enter the spec. Public read-only API probes are cheap and are this project's established habit (`docs/job-aggregator-landscape.md` is entirely built from them).
+- **World.** Facts that move — Adzuna's free-tier quota, model pricing and API shape, a job board's query semantics, scheduler behavior — verify live before they enter the spec. Public read-only API probes are cheap and are this project's established habit (`docs/job-aggregator-landscape/notes.md` is entirely built from them).
 - **Idempotency and the two storage families.** `run.py` is safely re-runnable: a repeat run yields 0 new rows and only bumps `last_seen`. The ATS family reconciles missing postings to `likely_closed`; the search family must not (see the `store.py` module docstring for why). A spec touching either preserves that. It must also never make a *successful-but-empty* response indistinguishable from "everything closed".
 - **Hermetic tests.** `tests/` must never touch the live `data/jobs.db` and never hit the network — and nothing enforces this structurally (`tests/conftest.py` holds only a Streamlit-cache fixture). Cleanliness rests on every test passing `tmp_path` explicitly and overriding `searches_path`. Recorded live trap: `run.main()` resolves `searches_path` to the real `searches.yaml` by default, so a test that forgets silently calls Himalayas/Adzuna/JobSpy on every `pytest` run. Any spec adding a code path states how its tests stay hermetic.
 
 ## Step 1 — Ground
 
-Read the modules the spec will touch; `CLAUDE.md`; `docs/BACKLOG.md` (decision history and rejected options — many specs start life as a backlog item there); existing `docs/tech_specs/*/spec.md` for tone and structure. Measure against `data/jobs.db` wherever the spec makes a quantitative claim. Verify moving external facts live.
+Read the modules the spec will touch; `CLAUDE.md`; `docs/backlog/BACKLOG.md` (decision history and rejected options — many specs start life as a backlog item there); existing `docs/tech_specs/*/spec.md` for tone and structure. Measure against `data/jobs.db` wherever the spec makes a quantitative claim. Verify moving external facts live.
 
 ## Step 2 — Draft
 
@@ -78,7 +78,7 @@ Status vocabulary — small and fixed, so a future session can tell built from p
 
 The final value is set by `/feature-workflow`, never here. Keep `## План коммитов`, `## Чек-лист реализации`, `## Открытые вопросы` and `## Вне скоупа` present and well-formed even when short — `/feature-workflow` consumes all four directly (plan to follow, boxes to tick, questions to resolve before coding, boundary not to cross).
 
-Section headers stay in Russian, matching the existing specs (`docs/tech_specs/*`, `docs/BACKLOG.md`) — independent of `CLAUDE.md`, which is English (2026-08-04, project convention: docs/docstrings/memory are English, spec bodies stay Russian). Tone: terse, technical, file-referenced, no marketing language.
+Section headers stay in Russian, matching the existing specs (`docs/tech_specs/*`, `docs/backlog/BACKLOG.md`) — independent of `CLAUDE.md`, which is English (2026-08-04, project convention: docs/docstrings/memory are English, spec bodies stay Russian). Tone: terse, technical, file-referenced, no marketing language.
 
 ## Step 5 — Place and report
 
@@ -86,6 +86,6 @@ Write to `docs/tech_specs/<kebab-slug>/spec.md`. Slug derived from the feature i
 
 `docs/` is tracked in this repo, so the spec is a real file in git. **No feature branch by default**: no PR flow here (the GitHub remote is a private backup mirror, not a collaboration repo) — work lands on `master`. Do not commit unless the user asks.
 
-If the spec grew out of a `docs/BACKLOG.md` item, add a pointer line back to it there.
+If the spec grew out of a `docs/backlog/BACKLOG.md` item, add a pointer line back to it there.
 
 Report the spec path and the single most important finding — especially any premise the grounding step overturned. Do not start implementation unless asked.
