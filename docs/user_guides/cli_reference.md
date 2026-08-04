@@ -9,7 +9,7 @@ cd ~/Рабочий\ стол/Projects/Dev/job-search && claude
 ```
 Полный путь: `/home/fastcentrifuge/Рабочий стол/Projects/Dev/job-search`. Отдельный, независимый git-репозиторий; свежая сессия сразу подхватит `CLAUDE.md` этой папки.
 
-**Streamlit UI:** http://localhost:8501 (после запуска ниже; порт по умолчанию, если свободен). Никаких других сетевых адресов/серверов в проекте нет — SQLite - локальный файл, ATS/агрегаторы вызываются исходящими HTTP-запросами, входящих портов не открывают. Ключи Adzuna — `.env` в корне (не в git).
+**Streamlit UI:** http://localhost:8501 (после запуска ниже; порт по умолчанию, если свободен). **Веб-GUI на Vercel:** https://ai-policy-jobs.vercel.app (постоянно доступен, пароль — `SITE_PASSWORD`, см. ниже раздел «Веб-GUI»). ATS/агрегаторы вызываются исходящими HTTP-запросами, входящих портов локальный инструмент не открывает. Ключи Adzuna — `.env` в корне (не в git).
 
 ## Окружение (venv, зависимости)
 
@@ -18,7 +18,7 @@ cd ~/Рабочий\ стол/Projects/Dev/job-search && claude
 ```bash
 uv venv                                                     # создать/пересоздать .venv
 uv pip install -r requirements.txt -r requirements-dev.txt  # Python-зависимости + ruff/mypy/pytest
-npm install                                                  # eslint (пока не на чем линтить — web/ ещё не построен)
+npm install                                                  # eslint (для web/public/**/*.js)
 ```
 
 ## Запуск
@@ -29,8 +29,8 @@ npm install                                                  # eslint (пока 
 .venv/bin/streamlit run app/app.py          # UI на localhost:8501
 .venv/bin/pytest                            # тесты (104+, герметично)
 .venv/bin/ruff check .                      # линт Python (чисто)
-.venv/bin/mypy scripts app                  # типы Python — 4 известные находки в app.py (палитра тем, Collection[str]), не баг, не исправлялось в рамках гигиены
-npx eslint .                                # линт JS — пока 0 файлов под web/public/**/*.js
+.venv/bin/mypy scripts app web              # типы Python (чисто)
+npx eslint .                                # линт JS (web/public/**/*.js)
 ```
 
 ⚠ Не bare `python3` — `python-jobspy`/`pandas` есть только в `.venv`.
@@ -86,6 +86,24 @@ systemctl --user disable --now job-search-run.timer # выключить авт�
 ```
 
 Признак сбоя всего прогона — ненулевой exit code `run.py` (реализовано вместе с таймером): если абсолютно все источники за прогон отвалились, `journalctl` покажет `job-search-run.service: Main process exited, code=exited, status=1`; частичный отказ или пустой конфиг по-прежнему завершаются кодом `0` — под таймером иначе нельзя было бы отличить «всё сломалось» от «просто нет свежих вакансий».
+
+## Веб-GUI на Vercel (`docs/tech_specs/vercel-web-gui/spec.md`)
+
+Прод: https://ai-policy-jobs.vercel.app — статический фронтенд (`web/public/`) + Python Vercel Functions (`web/api/`), данные читаются/пишутся напрямую из Vercel Blob (`jobs.db`), без БД-сервера. Гейт — `SITE_PASSWORD` (cookie), не встроенная Vercel Password Protection (недоступна на Hobby-плане).
+
+```bash
+cd web && vercel deploy --prod   # выкатить текущий код web/ в прод (нужен vercel link один раз на новой машине)
+vercel logs <url>                # логи функций (Python-трейсбеки, если что-то падает)
+vercel curl <url>/api/postings   # прогнать запрос с обходом Vercel Deployment Protection (актуально для superview-URL, прод им не прикрыт)
+```
+
+**Живая находка: `vercel blob put`/`get` понимают `--allow-overwrite`/`--add-random-suffix` только как флаги-без-значения** — присутствие флага включает, отсутствие выключает; `--add-random-suffix false` включает суффикс, а не выключает его (CLI 58.5.1, проверено на реальном сторе, задокументировано в `docs.vercel.com/docs/cli/blob`, не совпадает с `--help`-текстом команды).
+
+**Живая находка: GET-ответы для `jobs.db` из Vercel Blob приходят со слабым ETag (`W/"..."`).** Для условной записи (`If-Match`) нужен сильный валидатор (RFC 7232) — `web/api/_blob.py` срезает префикс `W/` перед использованием в заголовке записи; без этого каждая запись статуса падала 409/412.
+
+**Живая находка: read-after-write в Vercel Blob не мгновенный** — GET сразу после успешного POST/status может ещё ~минуту отдавать старое значение (CDN-кэш). `web/public/app.js` больше не перезапрашивает состояние после успешной записи статуса — обновляет карточку из уже известного ответа.
+
+Синхронизация данных — не через этот раздел, а через `scripts/blob_sync.py`, вызывается автоматически из `run.py __main__` (см. «Автозапуск» выше): скачивает `jobs.db` перед прогоном (подтягивает статусы, проставленные через веб-GUI), заливает обратно после.
 
 ## Прямой доступ к БД
 
