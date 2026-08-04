@@ -1,30 +1,32 @@
 # Job Search — Emerging Tech / AI Policy Analyst
 
-Независимый трек, изначально начат из ворктри `side-hustle-job` в другом репо (G2AI_ME), с 2026-07-24 живёт отдельно здесь. Не связан с G2AI по содержанию — но curriculum/бэкграунд куратора (AI-governance для малых государств, международное регулирование) напрямую релевантен искомым позициям.
+Independent track, originally split out of the `side-hustle-job` worktree in another repo (G2AI_ME); has lived here standalone since 2026-07-24. Unrelated to G2AI in content — but the curator's background (AI governance for small states, international regulation) is directly relevant to the roles targeted.
 
-**Принцип: не наращивать функционал просто потому что можем.** Это личный инструмент под одну конкретную задачу, не продукт и не enterprise-система. Любое предложение по развитию (своё или куратора) проверять на реальную необходимость, а не на «было бы прикольно/красиво/по фен-шую» — см. `docs/BACKLOG.md`, раздел «Рекомендации по развитию», где это применено на практике.
+**Principle: don't grow functionality just because we can.** A personal tool for one specific task, not a product or an enterprise system. Any development proposal (mine or the curator's) gets checked against real necessity, not "would be neat/polished" — see `docs/BACKLOG.md`, "Development recommendations" section, where this is applied in practice.
 
-## Что и зачем
+## What and why
 
-Ищем позицию **Emerging Tech / AI Policy Analyst** (диапазон ролей analyst → director, опционально PM) в think tank'ах и исследовательских подразделениях международных организаций, сфокусированных на policy/governance/global security/strategic stability вокруг emerging tech и AI (НЕ техническая стандартизация).
+Targeting an **Emerging Tech / AI Policy Analyst** position (analyst → director range, PM optional) at think tanks and international-org research units focused on policy/governance/global security/strategic stability around emerging tech and AI (NOT technical standardization).
 
-Гео-приоритет: **Тир A** (remote / Черногория-Сербия) > **Тир B** (Западная Европа) > **Тир C** (США/Япония, только сильные попадания). Вне скоупа: Китай, Россия, Ближний Восток, Восточная Европа.
+Geo priority: **Tier A** (remote / Montenegro-Serbia) > **Tier B** (Western Europe) > **Tier C** (US/Japan, strong matches only). Out of scope: China, Russia, Middle East, Eastern Europe.
 
-Гражданство куратора — РФ, эмигрант ~4 года без планов на возврат (открыто заявляется в заявках) — это накладывает дополнительный фильтр специально на Тир C (детали и методология — в `docs/BACKLOG.md`).
+Curator's citizenship — Russian, ~4 years emigrated with no plans to return (stated openly in applications) — adds an extra filter specifically for Tier C (details and methodology in `docs/BACKLOG.md`).
 
-Занятость: full-time приоритетно, part-time тоже подходит. Языки: английский и русский свободно, другие не требуются.
+Employment: full-time preferred, part-time also fine. Languages: fluent English and Russian, no others needed.
 
-## Где что лежать
+## Where things live
 
-- **`docs/BACKLOG.md`** — статус работ по тирам, методология фильтрации, план, история решений и отклонённых вариантов. Читать за деталями сюда, не в этот файл.
-- **`docs/ats-aggregator-sweep.md`** — направление 1: сверка ATS-платформ (Lever/Greenhouse/Personio) для организаций шортлиста.
-- **`docs/job-aggregator-landscape.md`** — обновление знаний по query-centric job-агрегаторам (JobSpy, RemoteOK, Himalayas, Adzuna) — курс на смену подхода org-centric → query-centric.
-- **`think-tank-shortlist.html`** — канонический артефакт-шортлист организаций (также опубликован как Claude Artifact — при обновлении republish того же file_path, чтобы не плодить новые ссылки).
-- **`docs/tech_specs/query-connectors/spec.md`** — спек query-centric коннекторов (Himalayas/Adzuna/JobSpy) — вторая, дополняющая семья к org-centric ATS. Статус: реализовано.
-- **`docs/tech_specs/triage-and-autonomy/spec.md`** — спек LLM-триажа релевантности, надёжности прогона и автозапуска. Статус: надёжность прогона и автозапуск (systemd-таймер, 00:00 UTC) реализованы 2026-07-26; LLM-триаж релевантности остаётся черновиком.
-- **`.claude/commands/`** — две кастомные команды (лёгкие адаптации одноимённых из G2AI_ME), работающие в связке: **`/tech-spec`** превращает запрос в спек по конвенции `docs/tech_specs/<slug>/spec.md` (план коммитов, чек-лист, открытые вопросы, вне скоупа) и ничего не коммитит; **`/feature-workflow`** — его прямое продолжение: подхватывает спек в статусе `черновик v<N>`, сначала закрывает открытые вопросы, затем исполняет готовый план коммит за коммитом и в конце переводит статус в `реализовано (<sha>..<sha>)`.
-- **`config/orgs.yaml`** (org-centric: known org → ATS) + **`config/searches.yaml`** (query-centric: search term → orgs/postings из данных) + **`scripts/`** — рабочий инструмент мониторинга вакансий → локальный SQLite (`data/jobs.db`, gitignored). Запуск: **`.venv/bin/python scripts/run.py`** (НЕ bare `python3` — с добавлением `python-jobspy`/`pandas` системного python недостаточно). С 2026-07-25 один прогон покрывает все источники, включая LinkedIn; флаг `--linkedin` остался в коде, но ни один спек больше не помечен `manual: true`, так что он ни на что не влияет.
-- **`docs/user_guides/cli_reference.md`** — краткая шпаргалка команд для ручного управления (адрес Streamlit-UI, прямой доступ к БД, формат конфигов).
-- **`app.py`** — карточный веб-интерфейс просмотра вакансий (Streamlit, свой `.venv/`). Запуск: `.venv/bin/streamlit run app.py`.
-- **`tests/`** — pytest, герметично (не трогает боевую `data/jobs.db`). Запуск: `.venv/bin/pytest`.
-- **GitHub** — приватное зеркало `github.com/HelgDemidov/ai-policy-job` (заведено 2026-08-04, чисто как бэкап за пределами локальной машины). PR-флоу не используется — работа по-прежнему идёт напрямую в `master`, пуш в `origin` делается вручную или в конце `/feature-workflow`.
+- **`docs/BACKLOG.md`** — status by tier, filtering methodology, plan, decision history and rejected options. Read here for detail, not this file.
+- **`docs/ats-aggregator-sweep.md`** — track 1: ATS-platform sweep (Lever/Greenhouse/Personio) for shortlist orgs.
+- **`docs/job-aggregator-landscape.md`** — knowledge update on query-centric job aggregators (JobSpy, RemoteOK, Himalayas, Adzuna) — shift from org-centric to query-centric approach.
+- **`artifacts/think-tank-shortlist.html`** — canonical org shortlist artifact (also published as a Claude Artifact — republish with the same `url` on update, to avoid minting new links).
+- **`docs/tech_specs/query-connectors/spec.md`** — spec for query-centric connectors (Himalayas/Adzuna/JobSpy), a second family complementing org-centric ATS. Status: implemented.
+- **`docs/tech_specs/triage-and-autonomy/spec.md`** — spec for LLM relevance triage, run reliability, and unattended scheduling. Status: run reliability + scheduling (systemd timer, 00:00 UTC) implemented 2026-07-26; LLM relevance triage remains a draft.
+- **`docs/tech_specs/vercel-web-gui/spec.md`** — spec for a hosted card-view GUI on Vercel, replacing local Streamlit. Status: infra live (Vercel project `job-search-gui`, Blob store, env vars — see spec §3/§4), application code not yet built.
+- **`.claude/commands/`** — custom commands, working as pairs: **`/tech-spec`** turns a request into a spec following the `docs/tech_specs/<slug>/spec.md` convention (commit plan, checklist, open questions, out of scope) and commits nothing; **`/feature-workflow`** is its direct continuation — picks up a spec at `черновик v<N>`, resolves open questions first, then executes the commit plan commit by commit and finally flips status to `реализовано (<sha>..<sha>)`.
+- **`config/orgs.yaml`** (org-centric: known org → ATS) + **`config/searches.yaml`** (query-centric: search term → orgs/postings from the data) + **`scripts/`** — the job-monitoring tool → local SQLite (`data/jobs.db`, gitignored). Run: **`.venv/bin/python scripts/run.py`** (NOT bare `python3` — system Python lacks `python-jobspy`/`pandas`). Since 2026-07-25 one run covers every source including LinkedIn; the `--linkedin` flag stays in the code but no spec is marked `manual: true` anymore, so it's currently a no-op.
+- **`docs/user_guides/cli_reference.md`** — short command cheat sheet for manual operation (Streamlit UI address, direct DB access, config format).
+- **`app/app.py`** — card-view web UI for browsing postings (Streamlit, own `.venv/`). Run: `.venv/bin/streamlit run app/app.py`.
+- **`tests/`** — pytest, hermetic (never touches live `data/jobs.db`). Run: `.venv/bin/pytest`.
+- **`.github/`** — CI (`workflows/tests.yml`, runs `tests/` on push/PR to `master`) + `dependabot.yml` (pip + github-actions, weekly). No branch protection — GitHub Pro is required for that on a private personal-account repo.
+- **GitHub** — private mirror at `github.com/HelgDemidov/ai-policy-job` (set up 2026-08-04, purely an off-machine backup). No PR flow — work still lands directly on `master`, pushed to `origin` manually or at the end of `/feature-workflow`.
