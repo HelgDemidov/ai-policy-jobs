@@ -87,9 +87,9 @@ systemctl --user disable --now job-search-run.timer # выключить авт�
 
 Признак сбоя всего прогона — ненулевой exit code `run.py` (реализовано вместе с таймером): если абсолютно все источники за прогон отвалились, `journalctl` покажет `job-search-run.service: Main process exited, code=exited, status=1`; частичный отказ или пустой конфиг по-прежнему завершаются кодом `0` — под таймером иначе нельзя было бы отличить «всё сломалось» от «просто нет свежих вакансий».
 
-## Веб-GUI на Vercel (`docs/tech_specs/vercel-web-gui/spec.md`)
+## Веб-GUI на Vercel (`docs/tech_specs/vercel-web-gui/spec.md`, хранилище — `docs/tech_specs/web-postgres-migration/spec.md`)
 
-Прод: https://ai-policy-jobs.vercel.app — статический фронтенд (`web/public/`) + Python Vercel Functions (`web/api/`), данные читаются/пишутся напрямую из Vercel Blob (`jobs.db`), без БД-сервера. Гейт — `SITE_PASSWORD` (cookie), не встроенная Vercel Password Protection (недоступна на Hobby-плане).
+Прод: https://ai-policy-jobs.vercel.app — статический фронтенд (`web/public/`) + Python Vercel Functions (`web/api/`), данные — Neon Postgres (проект `quiet-sea-26110140`, регион `aws-us-west-2` — не идеально, см. спек §2/«Что разошлось с планом»; `DATABASE_URL` в Vercel env + локальном `.env`). Гейт — `SITE_PASSWORD` (cookie), не встроенная Vercel Password Protection (недоступна на Hobby-плане).
 
 ```bash
 cd web && vercel deploy --prod   # выкатить текущий код web/ в прод (нужен vercel link один раз на новой машине)
@@ -97,13 +97,20 @@ vercel logs <url>                # логи функций (Python-трейсб�
 vercel curl <url>/api/postings   # прогнать запрос с обходом Vercel Deployment Protection (актуально для superview-URL, прод им не прикрыт)
 ```
 
-**Живая находка: `vercel blob put`/`get` понимают `--allow-overwrite`/`--add-random-suffix` только как флаги-без-значения** — присутствие флага включает, отсутствие выключает; `--add-random-suffix false` включает суффикс, а не выключает его (CLI 58.5.1, проверено на реальном сторе, задокументировано в `docs.vercel.com/docs/cli/blob`, не совпадает с `--help`-текстом команды).
+**Миграции схемы (Alembic, репо-корень `alembic/`):**
+```bash
+DATABASE_URL=<connection string> .venv/bin/alembic upgrade head    # применить миграции к Postgres вручную
+DATABASE_URL=<connection string> .venv/bin/alembic check           # сверить схему БД с web/api/_schema.py (дрейф-чек)
+```
+На практике `alembic upgrade head` вызывается программно из `scripts/postgres_sync.py` при каждом прогоне `run.py` (идемпотентно) — ручной вызов нужен только для отладки/первого разворачивания на новом Neon-проекте.
 
-**Живая находка: GET-ответы для `jobs.db` из Vercel Blob приходят со слабым ETag (`W/"..."`).** Для условной записи (`If-Match`) нужен сильный валидатор (RFC 7232) — `web/api/_blob.py` срезает префикс `W/` перед использованием в заголовке записи; без этого каждая запись статуса падала 409/412.
+**Синхронизация данных** — `scripts/postgres_sync.py`, вызывается автоматически из `run.py __main__` (см. «Автозапуск» выше): перед прогоном коннекторов подтягивает `status` из Postgres в локальный SQLite (не теряет правки, сделанные через веб-GUI); после прогона зеркалирует `organizations`/`searches`/`postings` обратно в Postgres одной транзакцией.
 
-**Живая находка: read-after-write в Vercel Blob не мгновенный** — GET сразу после успешного POST/status может ещё ~минуту отдавать старое значение (CDN-кэш). `web/public/app.js` больше не перезапрашивает состояние после успешной записи статуса — обновляет карточку из уже известного ответа.
+**Живая находка: `dict(conn.execute(select(a, b)))` в SQLAlchemy не работает напрямую** — у `CursorResult` есть собственный `.keys()` (имена колонок), из-за чего `dict()` ошибочно трактует результат как уже словарь-подобный. Нужен `.all()` перед `dict()`.
 
-Синхронизация данных — не через этот раздел, а через `scripts/blob_sync.py`, вызывается автоматически из `run.py __main__` (см. «Автозапуск» выше): скачивает `jobs.db` перед прогоном (подтягивает статусы, проставленные через веб-GUI), заливает обратно после.
+**Живая находка: полнотекстовый поиск (`websearch_to_tsquery`/`ts_rank`) — Postgres-специфика без аналога в SQLite.** `web/api/_repo.py`'s `_build_where` — единственное место в слое доступа к данным, где поведение зависит от диалекта (`engine.dialect.name`); тесты гоняют fallback-ветку (`LIKE`) через SQLite, реальное ранжирование проверяется только живьём против настоящего Neon или в CI-джобе `test-integration`.
+
+**Живая находка: два независимо захардкоженных «достаточно большое число» в разных языках расходятся.** `app.js` запрашивал `size=2000` для списка организаций-фильтров, `postings.py` резал `size` потолком `200` — часть организаций молча пропадала из фильтров. Правильный фикс — не увеличить число, а убрать зависимость от потолка вообще: отдельный эндпойнт `/api/facets` на `SELECT DISTINCT`, не имеющий ограничения по количеству строк в принципе.
 
 ## Прямой доступ к БД
 
