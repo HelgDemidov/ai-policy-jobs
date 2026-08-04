@@ -2,10 +2,15 @@
 on success (spec §4); web/api/postings.py and status.py check it per request.
 """
 import json
+import sys
 from http.server import BaseHTTPRequestHandler
+from pathlib import Path
 
-import _auth
-from _http import write_json
+# See postings.py for why this is needed — Vercel's Python runtime doesn't
+# put an api/*.py file's own directory on sys.path.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _auth  # noqa: E402
+from _http import write_json  # noqa: E402
 
 # 30 days — a personal single-curator tool, not worth re-prompting often.
 _MAX_AGE = 60 * 60 * 24 * 30

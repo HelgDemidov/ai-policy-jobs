@@ -51,7 +51,18 @@ def download_with_etag() -> tuple[bytes, str]:
         timeout=20,
     )
     resp.raise_for_status()
-    return resp.content, resp.headers["etag"]
+    etag = resp.headers["etag"]
+    # GET responses through the CDN cache layer come back as a *weak*
+    # validator (`W/"..."`, live-verified on jobs.db — likely because this
+    # file is large enough to get gzip'd in transit). If-Match requires
+    # strong comparison per RFC 7232 — a weak etag NEVER satisfies it, so
+    # passing it straight through made every write fail with a 412/409
+    # regardless of whether the content had actually changed. PUT's own
+    # response etag came back strong with no prefix, confirming this is a
+    # GET-path-only quirk, not something the write side needs to match.
+    if etag.startswith("W/"):
+        etag = etag[2:]
+    return resp.content, etag
 
 
 def upload(data: bytes, if_match: str) -> None:
