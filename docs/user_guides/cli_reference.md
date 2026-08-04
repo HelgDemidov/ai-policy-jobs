@@ -89,7 +89,7 @@ systemctl --user disable --now job-search-run.timer # выключить авт�
 
 ## Веб-GUI на Vercel (`docs/tech_specs/vercel-web-gui/spec.md`, хранилище — `docs/tech_specs/web-postgres-migration/spec.md`)
 
-Прод: https://ai-policy-jobs.vercel.app — статический фронтенд (`web/public/`) + Python Vercel Functions (`web/api/`), данные — Neon Postgres (проект `quiet-sea-26110140`, регион `aws-us-west-2` — не идеально, см. спек §2/«Что разошлось с планом»; `DATABASE_URL` в Vercel env + локальном `.env`). Гейт — `SITE_PASSWORD` (cookie), не встроенная Vercel Password Protection (недоступна на Hobby-плане).
+Прод: https://ai-policy-jobs.vercel.app — статический фронтенд (`web/public/`) + Python Vercel Functions (`web/api/`, регион закреплён `web/vercel.json`'s `"regions": ["fra1"]`), данные — Neon Postgres (проект `divine-shape-98570790`, регион `aws-eu-central-1`, тот же, что у `Scopus Search`; `DATABASE_URL` в Vercel env + локальном `.env`). Гейт — `SITE_PASSWORD` (cookie), не встроенная Vercel Password Protection (недоступна на Hobby-плане).
 
 ```bash
 cd web && vercel deploy --prod   # выкатить текущий код web/ в прод (нужен vercel link один раз на новой машине)
