@@ -5,6 +5,8 @@ Every test opens its own tmp_path database — never the real data/jobs.db.
 import sqlite3
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
 import store
 
 
@@ -231,6 +233,74 @@ def test_open_db_backfills_dedup_key_on_legacy_rows(tmp_path):
     conn = store.open_db(db_path)  # triggers _ensure_dedup_key_column
     key = conn.execute("SELECT dedup_key FROM postings WHERE ats_id='1'").fetchone()[0]
     assert key == "legacy org old role"
+
+
+# --- STRICT + CHECK(status) migration ---------------------------------------
+
+
+def _create_legacy_non_strict_db(db_path):
+    conn = sqlite3.connect(db_path)
+    conn.execute("""
+        CREATE TABLE postings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            org TEXT NOT NULL, tier TEXT, source TEXT NOT NULL, ats_id TEXT NOT NULL,
+            title TEXT NOT NULL, location TEXT, workplace_type TEXT, team TEXT,
+            commitment TEXT, url TEXT NOT NULL, description TEXT, posted_at TEXT,
+            first_seen TEXT NOT NULL, last_seen TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'new',
+            UNIQUE(source, ats_id)
+        )
+    """)
+    conn.execute(
+        """INSERT INTO postings (org, tier, source, ats_id, title, url, first_seen, last_seen)
+           VALUES ('Legacy Org', 'A', 'lever', '1', 'Old Role', 'https://x/1', 'x', 'x')"""
+    )
+    conn.commit()
+    conn.close()
+
+
+def test_open_db_migrates_legacy_table_to_strict(tmp_path):
+    db_path = tmp_path / "jobs.db"
+    _create_legacy_non_strict_db(db_path)
+
+    conn = store.open_db(db_path)
+
+    strict = conn.execute("SELECT strict FROM pragma_table_list('postings')").fetchone()[0]
+    assert strict == 1
+    count = conn.execute("SELECT COUNT(*) FROM postings").fetchone()[0]
+    assert count == 1
+    row = conn.execute("SELECT org, title, dedup_key FROM postings WHERE ats_id='1'").fetchone()
+    assert row == ("Legacy Org", "Old Role", "legacy org old role")
+
+
+def test_strict_migration_creates_backup_file(tmp_path):
+    db_path = tmp_path / "jobs.db"
+    _create_legacy_non_strict_db(db_path)
+
+    store.open_db(db_path)
+
+    backup_path = db_path.with_name(db_path.name + ".bak")
+    assert backup_path.exists()
+
+
+def test_strict_migration_rerun_is_a_noop(tmp_path):
+    db_path = tmp_path / "jobs.db"
+    _create_legacy_non_strict_db(db_path)
+    store.open_db(db_path).close()
+
+    conn = store.open_db(db_path)  # already strict — must not touch data again
+
+    strict = conn.execute("SELECT strict FROM pragma_table_list('postings')").fetchone()[0]
+    assert strict == 1
+    count = conn.execute("SELECT COUNT(*) FROM postings").fetchone()[0]
+    assert count == 1
+
+
+def test_check_constraint_rejects_invalid_status(tmp_path):
+    conn = store.open_db(tmp_path / "jobs.db")
+    store.upsert_postings(conn, "Acme", "A", "lever", [_posting("1")])
+
+    with pytest.raises(sqlite3.IntegrityError):
+        conn.execute("UPDATE postings SET status='bogus' WHERE ats_id='1'")
 
 
 # --- upsert_search_postings -------------------------------------------------

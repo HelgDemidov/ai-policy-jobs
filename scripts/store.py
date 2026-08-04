@@ -16,6 +16,7 @@ a posting already known — from ANY source — is touched (last_seen bumped),
 not re-inserted.
 """
 import re
+import shutil
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -44,6 +45,40 @@ CREATE TABLE IF NOT EXISTS postings (
 );
 """
 
+# Kept in sync by hand with app/app.py's STATUS_OPTIONS.
+STATUS_VALUES = ("new", "reviewed", "applied", "rejected", "likely_closed")
+_STATUS_CHECK_LIST = ", ".join(f"'{v}'" for v in STATUS_VALUES)
+
+# Same column set as SCHEMA plus dedup_key (added by _ensure_dedup_key_column)
+# — tier has no CHECK, it deliberately carries combined values like "A/B".
+_STRICT_SCHEMA = f"""
+CREATE TABLE postings_strict_new (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    org TEXT NOT NULL,
+    tier TEXT,
+    source TEXT NOT NULL,
+    ats_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    location TEXT,
+    workplace_type TEXT,
+    team TEXT,
+    commitment TEXT,
+    url TEXT NOT NULL,
+    description TEXT,
+    posted_at TEXT,
+    first_seen TEXT NOT NULL,
+    last_seen TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'new' CHECK(status IN ({_STATUS_CHECK_LIST})),
+    dedup_key TEXT,
+    UNIQUE(source, ats_id)
+) STRICT;
+"""
+
+_POSTINGS_COLUMNS = (
+    "id, org, tier, source, ats_id, title, location, workplace_type, team, "
+    "commitment, url, description, posted_at, first_seen, last_seen, status, dedup_key"
+)
+
 
 def _normalize_dedup_key(org: str, title: str) -> str:
     combined = f"{org} {title}".lower()
@@ -70,12 +105,47 @@ def _ensure_dedup_key_column(conn: sqlite3.Connection) -> None:
         conn.commit()
 
 
+def _ensure_strict_postings_table(conn: sqlite3.Connection, path: Path) -> None:
+    """Recreate `postings` as a STRICT table with CHECK(status). STRICT
+    doesn't apply retroactively via ALTER TABLE — this needs a full
+    recreate. Idempotent: no-op once already strict. On any failure the
+    transaction rolls back and the exception is re-raised — a loud failure
+    beats a silently half-migrated table."""
+    already_strict = conn.execute(
+        "SELECT strict FROM pragma_table_list('postings')"
+    ).fetchone()[0]
+    if already_strict:
+        return
+
+    backup_path = path.with_name(path.name + ".bak")
+    shutil.copy2(path, backup_path)
+
+    before = conn.execute("SELECT COUNT(*) FROM postings").fetchone()[0]
+    try:
+        conn.execute("BEGIN")
+        conn.execute(_STRICT_SCHEMA)
+        conn.execute(
+            f"INSERT INTO postings_strict_new ({_POSTINGS_COLUMNS}) "
+            f"SELECT {_POSTINGS_COLUMNS} FROM postings"
+        )
+        after = conn.execute("SELECT COUNT(*) FROM postings_strict_new").fetchone()[0]
+        if after != before:
+            raise RuntimeError(f"STRICT migration row-count mismatch: {before} -> {after}")
+        conn.execute("DROP TABLE postings")
+        conn.execute("ALTER TABLE postings_strict_new RENAME TO postings")
+        conn.execute("COMMIT")
+    except Exception:
+        conn.execute("ROLLBACK")
+        raise
+
+
 def open_db(path: Path | None = None) -> sqlite3.Connection:
     path = path or DB_PATH
     path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(path)
     conn.execute(SCHEMA)
     _ensure_dedup_key_column(conn)
+    _ensure_strict_postings_table(conn, path)
     return conn
 
 
