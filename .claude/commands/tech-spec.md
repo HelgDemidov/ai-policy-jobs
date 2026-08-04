@@ -78,7 +78,7 @@ Status vocabulary — small and fixed, so a future session can tell built from p
 
 The final value is set by `/feature-workflow`, never here. Keep `## План коммитов`, `## Чек-лист реализации`, `## Открытые вопросы` and `## Вне скоупа` present and well-formed even when short — `/feature-workflow` consumes all four directly (plan to follow, boxes to tick, questions to resolve before coding, boundary not to cross).
 
-Section headers stay in Russian, matching `CLAUDE.md` and the existing specs; only these instructions are English. Tone: terse, technical, file-referenced, no marketing language.
+Section headers stay in Russian, matching the existing specs (`docs/tech_specs/*`, `docs/BACKLOG.md`) — independent of `CLAUDE.md`, which is English (2026-08-04, project convention: docs/docstrings/memory are English, spec bodies stay Russian). Tone: terse, technical, file-referenced, no marketing language.
 
 ## Step 5 — Place and report
 
