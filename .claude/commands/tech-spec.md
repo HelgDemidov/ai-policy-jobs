@@ -84,7 +84,7 @@ Section headers stay in Russian, matching the existing specs (`docs/tech_specs/*
 
 Write to `docs/tech_specs/<kebab-slug>/spec.md`. Slug derived from the feature itself — lowercase ASCII, no spaces — not a copy of the user's raw phrasing.
 
-`docs/` is tracked in this repo, so the spec is a real file in git. **No feature branch by default**: no PR flow here (the GitHub remote is a private backup mirror, not a collaboration repo) — work lands on `master`. Do not commit unless the user asks.
+`docs/` is tracked in this repo, so the spec is a real file in git. **No feature branch by default**: no PR flow here (the GitHub remote is a private backup mirror, not a collaboration repo) — work lands on `main`. Do not commit unless the user asks.
 
 If the spec grew out of a `docs/backlog/BACKLOG.md` item, add a pointer line back to it there.
 

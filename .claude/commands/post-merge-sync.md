@@ -1,8 +1,8 @@
-Sync CLAUDE.md and project memory after merging a PR (Dependabot or otherwise) into master.
+Sync CLAUDE.md and project memory after merging a PR (Dependabot or otherwise) into main.
 
-Adapted from scopus_search_code's `/post-merge-sync`, stripped to what this repo actually has: no `frontend/CLAUDE.md` (no frontend), no `docs/` append step (`docs/` here is tracked, not gitignored — `/feature-workflow` already closes specs itself, this command never touches `docs/tech_specs/`), no CI branch-trigger cleanup (`tests.yml` triggers on a static `push: branches: [master]` + `pull_request`, not a growing per-branch list scopus adds to), no README (none exists here).
+Adapted from scopus_search_code's `/post-merge-sync`, stripped to what this repo actually has: no `frontend/CLAUDE.md` (no frontend), no `docs/` append step (`docs/` here is tracked, not gitignored — `/feature-workflow` already closes specs itself, this command never touches `docs/tech_specs/`), no CI branch-trigger cleanup (`tests.yml` triggers on a static `push: branches: [main]` + `pull_request`, not a growing per-branch list scopus adds to), no README (none exists here).
 
-Run `git log master --oneline -10` and `git diff HEAD~1 --stat` to see what the merge actually changed.
+Run `git log main --oneline -10` and `git diff HEAD~1 --stat` to see what the merge actually changed.
 
 ## Step 1 — Update CLAUDE.md
 

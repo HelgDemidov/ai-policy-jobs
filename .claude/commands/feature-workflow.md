@@ -37,7 +37,7 @@ Do not start building with open questions outstanding — in this project they r
 
 The commit plan is already in the spec. Re-read it against the current code (it was written earlier; the repo may have moved) and present only the **deltas** for approval — not the whole plan again. If Step 2's answers invalidate a planned commit, say so now rather than discovering it mid-build.
 
-**Branch: default to `master`.** This repo has no PR flow and linear history — a feature branch with nothing to merge into is ceremony. (A private GitHub remote exists purely as an off-machine backup, not for merging.) `git revert` is the rollback path. Create a branch only if the user asks for an escape hatch.
+**Branch: default to `main`.** This repo has no PR flow and linear history — a feature branch with nothing to merge into is ceremony. (A private GitHub remote exists purely as an off-machine backup, not for merging.) `git revert` is the rollback path. Create a branch only if the user asks for an escape hatch.
 
 ## Step 4 — Implement, commit by commit
 
@@ -85,4 +85,4 @@ Once every planned commit has landed:
 4. Update `docs/backlog/BACKLOG.md`: status of the originating item plus a pointer to the spec; and `CLAUDE.md` if the spec changed how the tool is run.
 5. Commit the closure as `docs: ...`.
 
-Push `master` to `origin` (private GitHub backup remote, added 2026-08-04) — no PR, it's a mirror, not a collaboration repo. Report: commits landed, final test result, what diverged from the plan, and what the spec explicitly left out of scope.
+Push `main` to `origin` (private GitHub backup remote, added 2026-08-04) — no PR, it's a mirror, not a collaboration repo. Report: commits landed, final test result, what diverged from the plan, and what the spec explicitly left out of scope.
