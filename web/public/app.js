@@ -178,6 +178,7 @@ function renderCard(posting) {
 }
 
 async function updateStatus(posting, selectEl, newStatus) {
+  const previousStatus = posting.status;
   selectEl.disabled = true;
   try {
     const resp = await fetch("/api/status", {
@@ -188,11 +189,18 @@ async function updateStatus(posting, selectEl, newStatus) {
     if (!resp.ok) {
       const body = await resp.json().catch(() => ({}));
       alert(body.error || `Failed to update status (${resp.status})`);
+      selectEl.value = previousStatus; // snap back to the last known-good value
+      return;
     }
+    // Update in-memory state directly instead of re-fetching: the write
+    // already succeeded, and Vercel Blob's read path is CDN-cached with a
+    // real propagation delay (live-verified 2026-08-04 — a GET fired
+    // immediately after a successful write still returned the pre-write
+    // status for close to a minute). Re-fetching here would show the user
+    // a stale value right after their own change appeared to do nothing.
+    posting.status = newStatus;
   } finally {
-    // Re-fetch either way — on success this reflects the real DB state; on
-    // failure it snaps the <select> back instead of leaving a stale value.
-    await refresh();
+    selectEl.disabled = false;
   }
 }
 
