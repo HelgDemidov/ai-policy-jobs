@@ -9,13 +9,14 @@ marked manual (LinkedIn was un-gated — see docs/backlog/BACKLOG.md), so the fl
 no-op; the mechanism is kept for gating a future source.
 """
 import argparse
+import os
 import sys
 from pathlib import Path
 
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import blob_sync  # noqa: E402
+import postgres_sync  # noqa: E402
 import store  # noqa: E402
 from connectors.ats import greenhouse, lever, personio  # noqa: E402
 from connectors.query import adzuna, himalayas, jobspy_search  # noqa: E402
@@ -116,6 +117,29 @@ def main(
     return 0
 
 
+ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
+
+
+def _load_database_url() -> str:
+    """Same minimal KEY=VALUE .env reader pattern as blob_sync.py's
+    _load_token / connectors/query/adzuna.py's _load_env_credentials — real
+    environment variables win over the .env file."""
+    url = os.environ.get("DATABASE_URL")
+    if url:
+        return url
+    if ENV_PATH.exists():
+        for line in ENV_PATH.read_text().splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            if key.strip() == "DATABASE_URL":
+                return value.strip()
+    raise RuntimeError(
+        "DATABASE_URL not set — see docs/tech_specs/web-postgres-migration/spec.md §2"
+    )
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -123,7 +147,23 @@ if __name__ == "__main__":
         help="also run manual:true search specs (no spec is marked manual right now — kept for future gating)",
     )
     args = parser.parse_args()
-    blob_sync.download(store.DB_PATH)  # pull state, including status writes from the web GUI
+
+    database_url = _load_database_url()
+    pg_engine = postgres_sync.get_engine(database_url)
+    config_dir = Path(__file__).resolve().parent.parent / "config"
+
+    postgres_sync.ensure_schema(database_url)
+
+    conn = store.open_db()
+    postgres_sync.pull_statuses(pg_engine, conn)  # preserve status writes from the web GUI
+    conn.close()
+
     exit_code = main(run_linkedin=args.linkedin)
-    blob_sync.upload(store.DB_PATH)  # publish this run's result
+
+    conn = store.open_db()
+    postgres_sync.sync_organizations(pg_engine, config_dir / "orgs.yaml", conn)
+    postgres_sync.sync_searches(pg_engine, config_dir / "searches.yaml")
+    postgres_sync.mirror_to_postgres(pg_engine, conn)  # publish this run's result
+    conn.close()
+
     sys.exit(exit_code)

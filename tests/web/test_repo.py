@@ -5,10 +5,9 @@ postgresql-only path is covered live against real Neon by
 tests/integration/test_migrations.py, not here — see _repo._build_where's
 docstring).
 """
-from sqlalchemy import create_engine
-
 import _repo
 import _schema
+from sqlalchemy import create_engine
 
 
 def _engine():
