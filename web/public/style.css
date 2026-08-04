@@ -269,6 +269,11 @@ body {
   gap: 1rem;
 }
 
+.load-more-btn {
+  display: block;
+  margin: 1.25rem auto 0;
+}
+
 .card {
   border: 1px solid var(--rule);
   border-radius: 6px;
