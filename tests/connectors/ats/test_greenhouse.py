@@ -1,6 +1,6 @@
-"""Tests for the Greenhouse ATS connector (scripts/greenhouse.py)."""
-import greenhouse
+"""Tests for the Greenhouse ATS connector (scripts/connectors/ats/greenhouse.py)."""
 import requests_mock
+from connectors.ats import greenhouse
 
 
 def test_fetch_combines_list_and_detail_requests():
