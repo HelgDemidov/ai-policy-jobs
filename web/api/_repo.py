@@ -7,9 +7,8 @@ GUI parity, same as the _logic.py this replaces
 """
 import os
 
-from sqlalchemy import column, create_engine, func, or_, select
-
 import _schema
+from sqlalchemy import column, create_engine, func, or_, select
 
 STATUS_VALUES = ("new", "reviewed", "applied", "rejected", "likely_closed")
 

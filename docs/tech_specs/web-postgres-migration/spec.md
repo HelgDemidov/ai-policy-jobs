@@ -186,9 +186,9 @@ else:
 - [ ] `tests/web/test_handlers.py` — HTTP-интеграционные тесты через реальный `HTTPServer` на loopback, `tmp_path`-SQLite вместо `_repo.get_engine()`
 - [x] `sqlalchemy==2.0.51`, `psycopg[binary]==3.3.4` (сверено на PyPI 2026-08-04) — в `web/requirements.txt` И корневом `requirements.txt`; `alembic==1.19.0` — ТОЛЬКО в корневой `requirements.txt` (`edd3395`)
 - [ ] Neon-проект создан в `aws-us-east-1`, подключён через Vercel Marketplace, `DATABASE_URL` в Vercel env + локальном `.env`
-- [ ] `scripts/postgres_sync.py` — все 5 функций; `run.py.__main__` использует его вместо `blob_sync`
-- [ ] `tests/test_postgres_sync.py` — unit-уровень по каждой из 5 функций
-- [ ] `tests/test_run_pipeline.py` — полный `run.main()` → `postgres_sync`-цепочка → итоговое состояние 3 таблиц + идемпотентность повторного прогона
+- [x] `scripts/postgres_sync.py` — `ensure_schema`, `pull_statuses`, `sync_organizations`, `sync_searches`, `mirror_to_postgres`, `get_engine`; `run.py.__main__` использует его вместо `blob_sync`. Попутно добавлена защита `mirror_to_postgres` от опустошения Postgres при (ошибочно) пустой локальной SQLite — параллель с уже существующей в `store.py` защитой от «успешный-но-пустой ответ = всё закрыто», которой не было в исходном плане
+- [x] `tests/test_postgres_sync.py` (7 тестов) — по каждой из функций синхронизации
+- [x] `tests/test_run_pipeline.py` (3 теста) — полный `run.main()` → `postgres_sync`-цепочка → все 3 таблицы, идемпотентность, и (главное) сохранение статуса, записанного «через веб-GUI», при повторном прогоне — свойство, которое раньше давал `blob_sync`
 - [ ] Postgres впервые наполнен реальным прогоном `scripts/run.py` ЛОКАЛЬНО (включая `alembic upgrade head`) — до деплоя коммита, переключающего `postings.py`/`status.py` на `_repo`
 - [ ] `web/public/app.js` — серверная пагинация, кнопка «Load more»
 - [ ] `_blob.py`, `blob_sync.py`, `_logic.py`, их тесты, Blob env vars — удалены
