@@ -28,4 +28,4 @@ Summarize in the reply: N claims checked, M fixed with evidence pairs, anything 
 
 ## 6. Out of scope
 
-Adding new facts, restructuring `CLAUDE.md`, editing code/tests/`docs/`, verifying external references (`docs/job-aggregator-landscape.md` etc.).
+Adding new facts, restructuring `CLAUDE.md`, editing code/tests/`docs/`, verifying external references (`docs/job-aggregator-landscape/notes.md` etc.).
