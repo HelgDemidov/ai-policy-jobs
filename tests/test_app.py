@@ -14,7 +14,7 @@ from streamlit.testing.v1 import AppTest
 
 import store
 
-APP_PATH = str(Path(__file__).resolve().parent.parent / "app.py")
+APP_PATH = str(Path(__file__).resolve().parent.parent / "app" / "app.py")
 
 
 def _vacancy_counter_text(at):

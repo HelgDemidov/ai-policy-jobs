@@ -14,14 +14,14 @@
 # company (happened with "iai" on Greenhouse during the initial pass — a UK
 # tech firm, not Istituto Affari Internazionali).
 #
-# Sweep of ~24 Tier A/B think tanks from think-tank-shortlist.html (2026-07-25)
+# Sweep of ~24 Tier A/B think tanks from artifacts/think-tank-shortlist.html (2026-07-25)
 # found almost none on a public-API ATS — most run bespoke/custom career
 # pages (confirmed: GovAI, Chatham House, RAND Europe, CLTR, Ada Lovelace,
 # CSER, The Future Society, Rethink Priorities/IAPS, Egmont, Bruegel, EUISS,
 # DGAP, Bertelsmann, Clingendael, St.Gallen, UNIDIR, IAI, IISS, LawAI, BCSP,
 # Institute Alternative). ECFR was the one hit, on Personio — see BACKLOG.md.
 #
-# tier mirrors think-tank-shortlist.html: A = remote/Montenegro-Serbia,
+# tier mirrors artifacts/think-tank-shortlist.html: A = remote/Montenegro-Serbia,
 # B = Western Europe, C = US/Japan.
 
 - org: Epoch AI

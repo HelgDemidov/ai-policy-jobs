@@ -72,7 +72,7 @@ Green tests are necessary, not sufficient. But in this repo a real run **mutates
 
 - **`run.py`** hits live APIs and writes to `data/jobs.db`. Record row count and status distribution before and after, confirm the delta matches what the spec predicted, and confirm a second consecutive run is a no-op (0 new, only `last_seen` bumped) — that idempotency is a load-bearing invariant.
 - **`triage.py`** and anything else calling a paid API: state the expected cost from the spec's own estimate *before* running, then compare the actual against it and record the result.
-- **`app.py`**: `.venv/bin/streamlit run app.py` on `localhost:8501` and look at it, or `AppTest` when the change is logic-only.
+- **`app/app.py`**: `.venv/bin/streamlit run app/app.py` on `localhost:8501` and look at it, or `AppTest` when the change is logic-only.
 - Anything touching reconciliation: confirm a successful-but-empty response does not mass-archive an organization (`store.py` guard).
 
 ## Step 7 — Close the spec
