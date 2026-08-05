@@ -43,7 +43,7 @@ The commit plan is already in the spec. Re-read it against the current code (it 
 
 One logical change per commit; never batch unrelated work. Conventional-commit prefixes consistent with the existing history (`feat(store):`, `feat(connectors):`, `feat(run):`, `docs:`, `chore:`).
 
-**The gate is `.venv/bin/ruff check .` + `.venv/bin/pytest`** — both are what CI's `test` job actually runs (`.github/workflows/tests.yml`), since the repo-hygiene tooling upgrade added `ruff`/`mypy` (`requirements-dev.txt`, config in `pyproject.toml`). CI does not run `mypy` as a gate, but it's cheap to check locally too (`.venv/bin/mypy web/api scripts app`) — do so before pushing, since a type error caught locally is faster than one caught on review. Do not slip in a *new* tool (black, a coverage threshold) as part of a feature commit — that is its own decision, subject to `CLAUDE.md`'s «не наращивать функционал»; ruff/mypy are not new, they're the existing gate.
+**The gate is `.venv/bin/ruff check .` + `.venv/bin/pytest`** — both are what CI's `test` job actually runs (`.github/workflows/tests.yml`), since the repo-hygiene tooling upgrade added `ruff`/`mypy` (`requirements-dev.txt`, config in `pyproject.toml`). CI does not run `mypy` as a gate, but it's cheap to check locally too (`.venv/bin/mypy scripts web`) — do so before pushing, since a type error caught locally is faster than one caught on review. Do not slip in a *new* tool (black, a coverage threshold) as part of a feature commit — that is its own decision, subject to `CLAUDE.md`'s «не наращивать функционал»; ruff/mypy are not new, they're the existing gate.
 
 - While iterating: the touched test file only, e.g. `.venv/bin/pytest tests/test_store.py`.
 - Before every commit: `.venv/bin/ruff check .` and the full test suite. Skipping `ruff` locally means finding out from a red CI check on the PR instead — strictly slower, not faster.
@@ -52,7 +52,7 @@ One logical change per commit; never batch unrelated work. Conventional-commit p
 
 ## Step 5 — Hermeticity check (repo-specific, do not skip)
 
-Test hermeticity here is a **convention, not a guard**: `tests/conftest.py` contains only a Streamlit-cache-clearing fixture. Nothing structurally prevents a test from opening the live `data/jobs.db` or calling a real API. The suite stays clean because every test passes `tmp_path` explicitly and overrides `searches_path` — a new test that forgets either will silently write to production data or hammer Himalayas/Adzuna/JobSpy on every `pytest` run. This has happened once already (recorded in `docs/backlog/BACKLOG.md`).
+Test hermeticity here is a **convention, not a guard**: `tests/conftest.py` only sets up `sys.path` for `scripts/` and `web/api/` — no fixtures, no isolation guard. Nothing structurally prevents a test from opening the live `data/jobs.db` or calling a real API. The suite stays clean because every test passes `tmp_path` explicitly and overrides `searches_path` — a new test that forgets either will silently write to production data or hammer Himalayas/Adzuna/JobSpy on every `pytest` run. This has happened once already (recorded in `docs/backlog/BACKLOG.md`).
 
 So measure around the suite whenever a commit adds tests:
 
@@ -72,7 +72,6 @@ Green tests are necessary, not sufficient. But in this repo a real run **mutates
 
 - **`run.py`** hits live APIs and writes to `data/jobs.db`. Record row count and status distribution before and after, confirm the delta matches what the spec predicted, and confirm a second consecutive run is a no-op (0 new, only `last_seen` bumped) — that idempotency is a load-bearing invariant.
 - **`triage.py`** and anything else calling a paid API: state the expected cost from the spec's own estimate *before* running, then compare the actual against it and record the result.
-- **`app/app.py`**: `.venv/bin/streamlit run app/app.py` on `localhost:8501` and look at it, or `AppTest` when the change is logic-only.
 - Anything touching reconciliation: confirm a successful-but-empty response does not mass-archive an organization (`store.py` guard).
 
 ## Step 7 — Close the spec

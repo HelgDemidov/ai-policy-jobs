@@ -2,7 +2,7 @@
 
 Independent track, originally split out of the `side-hustle-job` worktree in another repo (G2AI_ME); has lived here standalone since 2026-07-24. Unrelated to G2AI in content — but the curator's background (AI governance for small states, international regulation) is directly relevant to the roles targeted.
 
-**Principle: don't grow functionality just because we can.** A personal tool for one specific task, not a product or an enterprise system. Any development proposal (mine or the curator's) gets checked against real necessity, not "would be neat/polished" — see `docs/backlog/BACKLOG.md`, "Development recommendations" section, where this is applied in practice.
+**Principle: don't grow functionality just because we can.** A personal tool for one specific task, not a product or an enterprise system. Any development proposal (mine or the curator's) gets checked against real necessity, not "would be neat/polished" — see `docs/backlog/BACKLOG.md`'s "Архивное" entry "Рекомендации по развитию", where this is applied in practice.
 
 ## What and why
 
