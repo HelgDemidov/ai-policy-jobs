@@ -1,6 +1,7 @@
 /* Palette mirrors app/app.py's LIGHT/DARK dicts + .streamlit/config.toml,
    for visual parity between the two GUIs (spec: "паритет с app.py"). */
 :root {
+  color-scheme: light;
   --bg: #ffffff;
   --secondary-bg: #f0f2f6;
   --text: #31333f;
@@ -20,6 +21,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
+    color-scheme: dark;
     --bg: #0f1329;
     --secondary-bg: #161a36;
     --text: #f3ecd9;
@@ -38,6 +40,7 @@
 }
 
 :root[data-theme="dark"] {
+  color-scheme: dark;
   --bg: #0f1329;
   --secondary-bg: #161a36;
   --text: #f3ecd9;
@@ -55,6 +58,7 @@
 }
 
 :root[data-theme="light"] {
+  color-scheme: light;
   --bg: #ffffff;
   --secondary-bg: #f0f2f6;
   --text: #31333f;
@@ -188,6 +192,12 @@ body {
   display: flex;
   flex-direction: column;
   gap: 1.1rem;
+  /* +25% over the 260px grid track, pulled left by the same amount so the
+     boundary with main (the grid track's own right edge) doesn't move —
+     only the sidebar's left edge advances, into what was outer page margin.
+     Long org names were clipping in the narrower box. */
+  width: 325px;
+  margin-left: -65px;
 }
 
 .sidebar h2 {
@@ -203,10 +213,26 @@ body {
 }
 
 .sidebar legend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
   font-size: 0.78rem;
   color: var(--ink-soft);
   padding: 0 0.3rem;
 }
+
+.legend-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.legend-btn:hover { text-decoration: underline; }
 
 .tier-check-row {
   display: flex;
@@ -222,6 +248,16 @@ body {
   background: transparent;
   color: var(--text);
   font-size: 0.85rem;
+}
+
+/* `color-scheme` above covers most native form-control chrome, but Chromium
+   still renders <option> row backgrounds from its own light-scheme default
+   unless given an explicit color — live-verified: without this, the listbox
+   showed a grey box in light mode and a stray light-on-dark box in dark
+   mode, matching neither theme. */
+#org-filter option {
+  background-color: var(--bg);
+  color: var(--text);
 }
 
 .check-row {
@@ -345,5 +381,9 @@ body {
 
 @media (max-width: 900px) {
   .layout { grid-template-columns: 1fr; }
+  /* Sidebar's fixed width + negative margin only make sense next to a fixed
+     260px grid track (desktop) — on the single-column mobile layout it
+     needs to go back to filling its row normally. */
+  .sidebar { width: auto; margin-left: 0; }
   .card-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
 }
