@@ -1,28 +1,34 @@
-# Organizations wired into the ATS connectors (org-centric: fetch(slug) for
-# ONE known org). See searches.yaml for the complementary query-centric
-# family (fetch(spec) by search term — org/postings come from the data
-# itself, not a pre-known list here). Both write to the same postings table
-# and cross-source dedup via dedup_key (scripts/store.py).
+# Организации, подключённые к ATS-коннекторам (org-centric: fetch(slug) для
+# ОДНОЙ известной организации). Комплементарное query-centric семейство —
+# searches.yaml (fetch(spec) по поисковому запросу — организации и вакансии
+# приходят из самих данных, а не из заранее известного списка, как здесь).
+# Оба семейства пишут в одну и ту же таблицу postings, кросс-source дедуп —
+# по dedup_key (scripts/store.py).
 #
-# To add a new org: find its ATS slug — usually visible as a footer/"powered
-# by" link on the careers page, or guessable and checkable with:
+# Чтобы добавить новую организацию: найти её ATS-слаг — обычно виден в
+# футере/ссылке «powered by» на карьерной странице, либо угадывается и
+# проверяется так:
 #   curl -s -o /dev/null -w "%{http_code}\n" https://api.lever.co/v0/postings/<slug>?mode=json
 #   curl -s -o /dev/null -w "%{http_code}\n" https://boards-api.greenhouse.io/v1/boards/<slug>/jobs
 #   curl -s -o /dev/null -w "%{http_code}\n" https://<slug>.jobs.personio.com/xml
-# Always verify the returned content is actually the expected org before
-# trusting a 200 — short/generic slugs can coincidentally match an unrelated
-# company (happened with "iai" on Greenhouse during the initial pass — a UK
-# tech firm, not Istituto Affari Internazionali).
+# Всегда проверять, что вернувшийся контент — действительно нужная
+# организация, прежде чем доверять коду 200: короткие/общие слаги могут
+# случайно совпасть с посторонней компанией (так вышло с «iai» на
+# Greenhouse на первом проходе — британская tech-фирма, не Istituto Affari
+# Internazionali).
 #
-# Sweep of ~24 Tier A/B think tanks from artifacts/think-tank-shortlist.html (2026-07-25)
-# found almost none on a public-API ATS — most run bespoke/custom career
-# pages (confirmed: GovAI, Chatham House, RAND Europe, CLTR, Ada Lovelace,
-# CSER, The Future Society, Rethink Priorities/IAPS, Egmont, Bruegel, EUISS,
-# DGAP, Bertelsmann, Clingendael, St.Gallen, UNIDIR, IAI, IISS, LawAI, BCSP,
-# Institute Alternative). ECFR was the one hit, on Personio — see BACKLOG.md.
+# Первичный проход по ~24 think tank'ам Tier A/B (шортлист был собран из
+# HTML-файла artifacts/think-tank-shortlist.html, впоследствии удалён из
+# репозитория как одноразовый артефакт, 2026-07-25) почти никого не нашёл на
+# публичном ATS-API — у большинства своя кастомная карьерная страница
+# (проверено: GovAI, Chatham House, RAND Europe, CLTR, Ada Lovelace, CSER,
+# The Future Society, Rethink Priorities/IAPS, Egmont, Bruegel, EUISS, DGAP,
+# Bertelsmann, Clingendael, St.Gallen, UNIDIR, IAI, IISS, LawAI, BCSP,
+# Institute Alternative). ECFR — единственное попадание, на Personio — см.
+# docs/backlog/BACKLOG.md.
 #
-# tier mirrors artifacts/think-tank-shortlist.html: A = remote/Montenegro-Serbia,
-# B = Western Europe, C = US/Japan.
+# tier — как в исходном шортлисте: A = remote/Черногория-Сербия,
+# B = Западная Европа, C = США/Япония.
 
 - org: Epoch AI
   tier: A

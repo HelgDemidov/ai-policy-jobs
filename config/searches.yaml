@@ -1,18 +1,22 @@
-# Query-centric search specs — organizations and postings come from the data
-# itself, not a pre-known org list (contrast with orgs.yaml).
+# Query-centric поисковые спеки — организации и вакансии приходят из самих
+# данных, а не из заранее известного списка организаций (в отличие от
+# orgs.yaml).
 #
-# `manual: true` — spec runs only with `scripts/run.py --linkedin`. The mechanism
-# is live but currently unused: LinkedIn was gated this way until 2026-07-25, then
-# un-gated once it turned out to cost ~2-3 requests per run (unauthenticated
-# search, `linkedin_fetch_description` off) while being the highest-precision
-# source. Do NOT set `fetch_description: true` on the LinkedIn spec — that adds
-# one request per posting (~20x per run) and is where the rate-limit risk actually
-# lives. See docs/backlog/BACKLOG.md and docs/job-aggregator-landscape/notes.md.
+# `manual: true` — спек запускается только с `scripts/run.py --linkedin`.
+# Механизм рабочий, но сейчас не задействован ни для одного спека: LinkedIn
+# был под этим гейтом до 2026-07-25, затем гейт снят — обращение стоит всего
+# ~2-3 запроса на прогон (поиск без авторизации, `linkedin_fetch_description`
+# выключен), при этом источник самый точный по попаданиям. НЕ включать
+# `fetch_description: true` на LinkedIn-спеке — это добавляет отдельный
+# запрос на каждую вакансию (~×20 за прогон), и именно здесь реальный риск
+# рейт-лимита. См. docs/backlog/BACKLOG.md и
+# docs/job-aggregator-landscape/notes.md.
 #
-# Query phrasing is NOT interchangeable across sources — what works on one
-# (e.g. Adzuna's `think tank`) may be noise on another. See
-# docs/job-aggregator-landscape/notes.md for the live-tested query lessons behind
-# each entry below before adding new ones by guesswork.
+# Формулировка запроса НЕ взаимозаменяема между источниками — то, что
+# работает на одном (например, `think tank` на Adzuna), может оказаться
+# шумом на другом. Живые уроки по каждой записи ниже — в
+# docs/job-aggregator-landscape/notes.md; перед добавлением новых запросов
+# наугад стоит свериться с ними.
 
 - id: himalayas-policy
   source: himalayas
