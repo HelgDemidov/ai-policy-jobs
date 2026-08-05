@@ -308,6 +308,13 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("hide-closed").addEventListener("change", () => loadPage(1, { append: false }));
   document.getElementById("remote-only").addEventListener("change", () => loadPage(1, { append: false }));
   document.getElementById("org-filter").addEventListener("change", () => loadPage(1, { append: false }));
+  document.getElementById("org-select-all-btn").addEventListener("click", () => {
+    // Only the org multi-select needs this: unlike checkboxes/text input, once
+    // you've narrowed a <select multiple> there's no click that gets you back
+    // to "everything" short of ctrl/cmd-clicking every option by hand.
+    Array.from(document.getElementById("org-filter").options).forEach((o) => { o.selected = true; });
+    loadPage(1, { append: false });
+  });
   document
     .getElementById("search-input")
     .addEventListener("input", debounce(() => loadPage(1, { append: false }), 300));
