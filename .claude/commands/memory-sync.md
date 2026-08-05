@@ -6,7 +6,7 @@ Run manually, periodically, or before a work session that will lean on memory be
 
 ## 1. Sources of truth
 
-Live code (`scripts/`, `app/`, `tests/`, `config/`), `git log`/`gh`, filesystem (path existence, directory layout). NOT truth — the patients: `CLAUDE.md`, memory files, `docs/`. Your context already holds `CLAUDE.md`/`MEMORY.md` from session start — treat both as unverified until checked against a fresh command.
+Live code (`scripts/`, `web/`, `tests/`, `config/`), `git log`/`gh`, filesystem (path existence, directory layout). NOT truth — the patients: `CLAUDE.md`, memory files, `docs/`. Your context already holds `CLAUDE.md`/`MEMORY.md` from session start — treat both as unverified until checked against a fresh command.
 
 ## 2. Evidence discipline
 
