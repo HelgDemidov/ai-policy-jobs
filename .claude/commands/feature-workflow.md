@@ -2,7 +2,7 @@ Implement an approved-but-not-yet-built spec (`docs/tech_specs/<slug>/spec.md`) 
 
 Direct continuation of `/tech-spec`: that command produces the plan, this one executes it. Invoke as `/feature-workflow [slug | path]`.
 
-Adapted from G2AI_ME's `/feature-workflow`, restructured around the fact that in this repo the spec **already carries its own commit plan and checklist** — so this command follows a plan rather than inventing one. Also stripped: feature branches off `origin/main`, `gh pr create`, ruff/mypy gates, the coverage measurement — none of that exists here.
+Adapted from G2AI_ME's `/feature-workflow`, restructured around the fact that in this repo the spec **already carries its own commit plan and checklist** — so this command follows a plan rather than inventing one. Also stripped: the coverage measurement — none of that exists here. Feature branches + `gh pr create` and `ruff`/`mypy` gates DO now exist in this repo (added 2026-08-05 and by an earlier repo-hygiene tooling upgrade, respectively) — see Step 3 and Step 4.
 
 ## Seam with `/tech-spec` — what is guaranteed and consumed
 
@@ -43,10 +43,10 @@ The commit plan is already in the spec. Re-read it against the current code (it 
 
 One logical change per commit; never batch unrelated work. Conventional-commit prefixes consistent with the existing history (`feat(store):`, `feat(connectors):`, `feat(run):`, `docs:`, `chore:`).
 
-**The entire gate is `.venv/bin/pytest`.** There is no ruff, no mypy, no black, no coverage threshold in this repo (`requirements-dev.txt` is `pytest` + `requests-mock`; `pyproject.toml` sets only `testpaths`). Do not invent a lint step, and do not slip those tools in as part of a feature commit — that is its own decision, subject to `CLAUDE.md`'s «не наращивать функционал».
+**The gate is `.venv/bin/ruff check .` + `.venv/bin/pytest`** — both are what CI's `test` job actually runs (`.github/workflows/tests.yml`), since the repo-hygiene tooling upgrade added `ruff`/`mypy` (`requirements-dev.txt`, config in `pyproject.toml`). CI does not run `mypy` as a gate, but it's cheap to check locally too (`.venv/bin/mypy web/api scripts app`) — do so before pushing, since a type error caught locally is faster than one caught on review. Do not slip in a *new* tool (black, a coverage threshold) as part of a feature commit — that is its own decision, subject to `CLAUDE.md`'s «не наращивать функционал»; ruff/mypy are not new, they're the existing gate.
 
 - While iterating: the touched test file only, e.g. `.venv/bin/pytest tests/test_store.py`.
-- Before every commit: the full suite. It is ~77 tests in ~4 seconds — there is no budget reason to skip it.
+- Before every commit: `.venv/bin/ruff check .` and the full test suite. Skipping `ruff` locally means finding out from a red CI check on the PR instead — strictly slower, not faster.
 
 **Tick the `## Чек-лист реализации` box in the same commit that completes the item.** `docs/` is tracked in this repo (unlike G2AI, where the spec was gitignored), so the checklist is part of history — keeping it current per-commit makes every point in the log honest, instead of a single cosmetic sweep at the end.
 
@@ -79,7 +79,7 @@ Green tests are necessary, not sufficient. But in this repo a real run **mutates
 
 Once every planned commit has landed:
 
-1. Full `.venv/bin/pytest` one final time; report the count.
+1. Full `.venv/bin/ruff check .` and `.venv/bin/pytest` one final time; report the count. CI (`.github/workflows/tests.yml`) runs the same `ruff check` gate on the PR — catch it here, not on a red check after pushing.
 2. Status line → `реализовано (<first-sha>..<last-sha>)`, every checklist box ticked, the commit plan annotated with the actual short hashes.
 3. **Add `## Что разошлось с планом`** — renamed helpers, a design fork resolved differently once real code appeared, a decision reversed mid-flight, a predicted consequence that actually materialized. This is what tells a future session the spec was a plan rather than a transcript. Omit only when genuinely nothing diverged.
 4. Update `docs/backlog/BACKLOG.md`: status of the originating item plus a pointer to the spec; and `CLAUDE.md` if the spec changed how the tool is run.
