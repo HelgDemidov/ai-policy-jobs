@@ -1,6 +1,6 @@
 # Спек: укрепление аутентификации и безопасности `web/`
 
-Статус: черновик v1 · 2026-08-05
+Статус: реализовано (`d5b9138`..`be3f2ab`) · 2026-08-05
 Происхождение: прямой запрос куратора — критический аудит (`/brainstorming` + `/systematic-debugging`, 2026-08-05) архитектурной чистоты и безопасности `web/` от фронтенда до БД, по итогам которого куратор попросил `/tech-spec`.
 
 ## 0. Что и зачем
@@ -53,21 +53,28 @@
 
 ## План коммитов
 
-1. `feat(web): add auth_state table — schema + migration`
-2. `feat(web): _auth.py — HMAC session tokens with revocable epoch, constant-time compare`
-3. `feat(web): add POST /api/logout`
-4. `feat(web): logout button in the GUI`
-5. `fix(web): rate-limit /api/login via auth_state lockout`
-6. `fix(web): security headers via vercel.json`
+1. `feat(web): add auth_state table — schema + migration` (`d5b9138`)
+2. `feat(web): _auth.py — HMAC session tokens with revocable epoch, constant-time compare` (`ac03b9e`)
+3. `feat(web): add POST /api/logout` (`ec9005b`)
+4. `feat(web): logout button in the GUI` (`31991a1`)
+5. `fix(web): rate-limit /api/login via auth_state lockout` (`e61c67c`)
+6. `fix(web): security headers via vercel.json` (`be3f2ab`)
 
 ## Чек-лист реализации
 
-- [ ] 1. `auth_state` — schema + migration
-- [ ] 2. HMAC-токены с epoch, constant-time сравнение
-- [ ] 3. `POST /api/logout`
-- [ ] 4. Кнопка Logout в GUI
-- [ ] 5. Rate limiting / lockout на `/api/login`
-- [ ] 6. Security-заголовки
+- [x] 1. `auth_state` — schema + migration
+- [x] 2. HMAC-токены с epoch, constant-time сравнение
+- [x] 3. `POST /api/logout`
+- [x] 4. Кнопка Logout в GUI
+- [x] 5. Rate limiting / lockout на `/api/login`
+- [x] 6. Security-заголовки
+
+## Что разошлось с планом
+
+- **`locked_until` понадобилась явная нормализация timezone-naive/aware** — не было в исходном плане. SQLite (тесты) возвращает `DateTime(timezone=True)` naive-датой при чтении (нет нативной поддержки timezone), Postgres (прод) — aware; сравнение `now < locked_until` без нормализации падало бы `TypeError` именно на Postgres, то есть прошло бы мимо тестов на SQLite и вскрылось бы только в бою. Добавлен `_auth._as_aware_utc()` — приводит naive к UTC перед сравнением, портируемо на обоих диалектах. Живьём подтверждено на Neon staging (см. ниже) — без этого шага прогон падал именно там.
+- **Живая HTTP-проверка задеплоенной функции пошла не через preview-деплой, как предполагалось молчаливо, а напрямую в prod.** Preview-URL Vercel закрыт SSO-редиректом (`vercel.com/sso-api`) на этом аккаунте, а `vercel curl` (штатный обход защиты) в текущей CLI 58.5.1 не резолвит переданный домен (`Could not resolve host`) — вероятно, баг beta-команды. Куратор подтвердил прямой прод-деплой явно (`AskUserQuestion`), тест на lockout-порог (10 неудачных попыток) сознательно не гонялся против прода — только против staging (см. ниже), чтобы не заблокировать реальную сессию куратора.
+- **Миграция `0003_add_auth_state` и живая проверка auth-логики** прогнаны против Neon staging branch (`STAGING_DATABASE_URL`) перед проверкой в проде — issue/verify токена, `bump_epoch`, lockout после порога и его истечение, сброс попыток при успешном логине — все пять сценариев подтверждены на реальном Postgres, не только на SQLite юнит-тестах.
+- Всё остальное — без отклонений от §1–§5.
 
 ## Открытые вопросы
 

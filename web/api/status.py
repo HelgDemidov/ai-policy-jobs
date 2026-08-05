@@ -19,7 +19,8 @@ from _http import write_json  # noqa: E402
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
-        if not _auth.is_authenticated(self.headers.get("Cookie")):
+        engine = _repo.get_engine()
+        if not _auth.is_authenticated(self.headers.get("Cookie"), engine):
             write_json(self, 401, {"error": "unauthorized"})
             return
 
@@ -37,6 +38,6 @@ class handler(BaseHTTPRequestHandler):
             write_json(self, 400, {"error": "source, ats_id, and a valid status are required"})
             return
 
-        _repo.set_status(_repo.get_engine(), source, ats_id, new_status)
+        _repo.set_status(engine, source, ats_id, new_status)
 
         write_json(self, 200, {"ok": True})
