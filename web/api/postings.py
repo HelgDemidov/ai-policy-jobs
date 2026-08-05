@@ -56,7 +56,8 @@ def _parse_pagination(query: dict) -> tuple[int, int]:
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
-        if not _auth.is_authenticated(self.headers.get("Cookie")):
+        engine = _repo.get_engine()
+        if not _auth.is_authenticated(self.headers.get("Cookie"), engine):
             write_json(self, 401, {"error": "unauthorized"})
             return
 
@@ -64,6 +65,6 @@ class handler(BaseHTTPRequestHandler):
         filters = _parse_filters(query)
         page, size = _parse_pagination(query)
 
-        items, total = _repo.list_postings(_repo.get_engine(), filters, page=page, size=size)
+        items, total = _repo.list_postings(engine, filters, page=page, size=size)
 
         write_json(self, 200, {"items": items, "total": total, "page": page, "size": size})
