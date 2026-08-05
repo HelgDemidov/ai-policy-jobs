@@ -9,7 +9,7 @@ cd ~/Рабочий\ стол/Projects/Dev/job-search && claude
 ```
 Полный путь: `/home/fastcentrifuge/Рабочий стол/Projects/Dev/job-search`. Отдельный, независимый git-репозиторий; свежая сессия сразу подхватит `CLAUDE.md` этой папки.
 
-**Streamlit UI:** http://localhost:8501 (после запуска ниже; порт по умолчанию, если свободен). **Веб-GUI на Vercel:** https://ai-policy-jobs.vercel.app (постоянно доступен, пароль — `SITE_PASSWORD`, см. ниже раздел «Веб-GUI»). ATS/агрегаторы вызываются исходящими HTTP-запросами, входящих портов локальный инструмент не открывает. Ключи Adzuna — `.env` в корне (не в git).
+**Веб-GUI на Vercel:** https://ai-policy-jobs.vercel.app (постоянно доступен, пароль — `SITE_PASSWORD`, см. ниже раздел «Веб-GUI»). ATS/агрегаторы вызываются исходящими HTTP-запросами, входящих портов локальный инструмент не открывает. Ключи Adzuna — `.env` в корне (не в git).
 
 ## Окружение (venv, зависимости)
 
@@ -26,20 +26,13 @@ npm install                                                  # eslint (для we
 ```bash
 .venv/bin/python scripts/run.py            # синхронизация: все ATS + все search-источники, включая LinkedIn
 .venv/bin/python scripts/run.py --linkedin  # то же (флаг включает спеки с manual: true — сейчас таких нет)
-.venv/bin/streamlit run app/app.py          # UI на localhost:8501
 .venv/bin/pytest                            # тесты (104+, герметично)
 .venv/bin/ruff check .                      # линт Python (чисто)
-.venv/bin/mypy scripts app web              # типы Python (чисто)
+.venv/bin/mypy scripts web                  # типы Python (чисто)
 npx eslint .                                # линт JS (web/public/**/*.js)
 ```
 
 ⚠ Не bare `python3` — `python-jobspy`/`pandas` есть только в `.venv`.
-
-**Живой урок: активационный email-prompt Streamlit при первом запуске.** Перед стартом любого `streamlit run` пакет безусловно проверяет наличие `~/.streamlit/credentials.toml` (`runtime/credentials.py`, без исключений для headless/non-tty окружений); если файла нет — печатает приветствие «Welcome to Streamlit!» и ждёт email через интерактивный `click.prompt`. В обычном терминале достаточно нажать Enter (пустой email допустим). Но при запуске из неинтерактивной оболочки без stdin (например, фоновым процессом) `click.prompt` получает EOF и падает с ошибкой вместо вопроса. Обход — заранее создать файл с пустым email, тогда проверка проходит молча и вопрос больше не появляется:
-```bash
-mkdir -p ~/.streamlit && printf '[general]\nemail = ""\n' > ~/.streamlit/credentials.toml
-```
-Уже сделано на этой машине 2026-07-25 — при живом воспроизведении обнаружилось, что файл до этого момента не существовал, хотя приложение уже запускалось и проверялось ранее (см. `docs/backlog/BACKLOG.md`, раздел про интерфейс просмотра вакансий) — вероятно, тот прогон либо прошёл через тот же креш иначе, либо файл был впоследствии удалён (например, командой `streamlit reset`). Актуально повторить этот шаг на новой машине или после `streamlit reset`.
 
 ## Автозапуск (systemd user timer, реализовано 2026-07-26)
 

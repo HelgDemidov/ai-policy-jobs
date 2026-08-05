@@ -6,7 +6,7 @@ import globals from "globals";
 // code not built); this just has the tool ready for when it lands.
 export default [
   // Global ignores — this repo is mostly Python; without this ESLint walks
-  // .venv/'s bundled vendor JS (streamlit's altair/pydeck assets) too.
+  // .venv/'s bundled vendor JS (transitive deps ship some) too.
   { ignores: [".venv/**", "node_modules/**", "data/**", "**/__pycache__/**"] },
   js.configs.recommended,
   {
