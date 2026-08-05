@@ -15,9 +15,8 @@ import os
 import time
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import func, select
-
 import _schema
+from sqlalchemy import func, select
 
 COOKIE_NAME = "site_auth"
 # 30 days — a personal single-curator tool, not worth re-prompting often.
