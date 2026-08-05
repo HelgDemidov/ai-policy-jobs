@@ -1,6 +1,5 @@
 requests==2.34.2
 PyYAML==6.0.3
-streamlit==1.60.0
 pandas==2.3.3
 python-jobspy==1.1.82
 sqlalchemy==2.0.51
