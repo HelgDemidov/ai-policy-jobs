@@ -61,9 +61,11 @@ def test_html_scrape_entries_use_url_and_list_selector_not_slug(tmp_path, monkey
     db_path = tmp_path / "jobs.db"
     captured = {}
 
-    def _fake_fetch(url, list_selector=None):
+    def _fake_fetch(url, list_selector=None, needs_browser=False, use_browser_ua=False):
         captured["url"] = url
         captured["list_selector"] = list_selector
+        captured["needs_browser"] = needs_browser
+        captured["use_browser_ua"] = use_browser_ua
         return [_posting("h1")]
 
     monkeypatch.setattr(run.html_scrape, "fetch", _fake_fetch)
@@ -72,10 +74,45 @@ def test_html_scrape_entries_use_url_and_list_selector_not_slug(tmp_path, monkey
         searches_path=_no_searches_path(tmp_path), filters_path=_no_filters_path(tmp_path),
     )
 
-    assert captured == {"url": "https://gamma.org/careers", "list_selector": ".jobs"}
+    assert captured == {
+        "url": "https://gamma.org/careers", "list_selector": ".jobs",
+        "needs_browser": False, "use_browser_ua": False,
+    }
     conn = store.open_db(db_path)
     rows = conn.execute("SELECT org, ats_id FROM postings").fetchall()
     assert rows == [("Gamma", "h1")]
+
+
+def test_wp_json_entries_use_url_and_post_type_not_slug(tmp_path, monkeypatch):
+    orgs_path = tmp_path / "orgs.yaml"
+    orgs_path.write_text(
+        yaml.safe_dump(
+            [
+                {
+                    "org": "Delta", "tier": "C", "ats": "wp_json",
+                    "url": "https://delta.org", "post_type": "job-listings",
+                },
+            ]
+        )
+    )
+    db_path = tmp_path / "jobs.db"
+    captured = {}
+
+    def _fake_fetch(url, post_type):
+        captured["url"] = url
+        captured["post_type"] = post_type
+        return [_posting("w1")]
+
+    monkeypatch.setattr(run.wp_json, "fetch", _fake_fetch)
+    run.main(
+        orgs_path=orgs_path, db_path=db_path,
+        searches_path=_no_searches_path(tmp_path), filters_path=_no_filters_path(tmp_path),
+    )
+
+    assert captured == {"url": "https://delta.org", "post_type": "job-listings"}
+    conn = store.open_db(db_path)
+    rows = conn.execute("SELECT org, ats_id FROM postings").fetchall()
+    assert rows == [("Delta", "w1")]
 
 
 def test_orchestrates_multiple_orgs_and_upserts_each(tmp_path, monkeypatch):
