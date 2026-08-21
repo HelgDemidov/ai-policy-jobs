@@ -24,11 +24,31 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import postgres_sync  # noqa: E402
 import relevance_filter  # noqa: E402
 import store  # noqa: E402
-from connectors.ats import greenhouse, lever, personio  # noqa: E402
+from connectors.ats import (  # noqa: E402
+    greenhouse,
+    icims,
+    jazzhr,
+    lever,
+    personio,
+    pinpoint,
+    smartrecruiters,
+    teamtailor,
+    workable,
+)
 from connectors.query import adzuna, jobspy_search  # noqa: E402
 from connectors.query import common as query_common  # noqa: E402
 
-CONNECTORS = {"lever": lever.fetch, "greenhouse": greenhouse.fetch, "personio": personio.fetch}
+CONNECTORS = {
+    "lever": lever.fetch,
+    "greenhouse": greenhouse.fetch,
+    "personio": personio.fetch,
+    "smartrecruiters": smartrecruiters.fetch,
+    "teamtailor": teamtailor.fetch,
+    "workable": workable.fetch,
+    "pinpoint": pinpoint.fetch,
+    "icims": icims.fetch,
+    "jazzhr": jazzhr.fetch,
+}
 
 SEARCH_CONNECTORS = {
     "adzuna": adzuna.fetch,

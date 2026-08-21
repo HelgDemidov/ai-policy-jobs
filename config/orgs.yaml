@@ -17,15 +17,25 @@
 # Greenhouse на первом проходе — британская tech-фирма, не Istituto Affari
 # Internazionali).
 #
-# Первичный проход по ~24 think tank'ам Tier A/B (шортлист был собран из
-# HTML-файла artifacts/think-tank-shortlist.html, впоследствии удалён из
-# репозитория как одноразовый артефакт, 2026-07-25) почти никого не нашёл на
-# публичном ATS-API — у большинства своя кастомная карьерная страница
-# (проверено: GovAI, Chatham House, RAND Europe, CLTR, Ada Lovelace, CSER,
-# The Future Society, Rethink Priorities/IAPS, Egmont, Bruegel, EUISS, DGAP,
-# Bertelsmann, Clingendael, St.Gallen, UNIDIR, IAI, IISS, LawAI, BCSP,
-# Institute Alternative). ECFR — единственное попадание, на Personio — см.
-# docs/backlog/BACKLOG.md.
+# Первичный проход по ~24 think tank'ам Tier A/B (2026-07-25) нашёл только
+# ECFR/Personio на брендах Lever/Greenhouse/Ashby/Personio — остальные
+# показались «кастомными». Повторная проверка 2026-08-21 (ресёрч под
+# docs/tech_specs/point-source-connectors/spec.md) нашла: многие из них на
+# деле — узнаваемые платформы, просто другие: SmartRecruiters, Teamtailor,
+# Workable, Pinpoint (публичный JSON), iCIMS/JazzHR (server-rendered HTML,
+# iCIMS дополнительно за AWS WAF — см. scripts/browser_resolver.py). Слаги:
+#   curl -s "https://api.smartrecruiters.com/v1/companies/<slug>/postings?limit=1"
+#   curl -s "https://<careers-домен>/jobs.json"                    # Teamtailor
+#   curl -s "https://apply.workable.com/api/v1/widget/accounts/<slug>?full=true"
+#   curl -s "https://<careers-домен>/postings.json"                # Pinpoint
+#   curl -s "https://<slug>.icims.com/jobs/search?ss=1" -H "User-Agent: ..."   # 405 без браузера — это нормально, см. spec §1
+#   curl -s "https://<slug>.applytojob.com/apply" -H "User-Agent: ..."         # JazzHR
+# Полная выборка кандидатов на будущий донабор —
+# docs/think-tank-io-source-sweep/notes.md.
+#
+# ats: html_scrape — bespoke-хвост без общей платформы, записи используют
+# `url` (+ опционально `list_selector`) вместо `slug`, см.
+# scripts/connectors/ats/html_scrape.py.
 #
 # tier — как в исходном шортлисте: A = remote/Черногория-Сербия,
 # B = Западная Европа, C = США/Япония.
@@ -50,3 +60,48 @@
   tier: B
   ats: personio
   slug: ecfr
+
+- org: OECD
+  tier: B
+  ats: smartrecruiters
+  slug: OECD
+- org: Harvard University
+  tier: C
+  ats: smartrecruiters
+  slug: HarvardUniversity
+- org: Chatham House
+  tier: B
+  ats: teamtailor
+  slug: careers.chathamhouse.org
+- org: Istituto Affari Internazionali
+  tier: B
+  ats: teamtailor
+  slug: lavoro.iai.it
+- org: RAND Europe
+  tier: B
+  ats: workable
+  slug: rand-europe
+- org: Rethink Priorities
+  tier: A
+  ats: pinpoint
+  slug: careers.rethinkpriorities.org
+- org: Council on Foreign Relations
+  tier: C
+  ats: icims
+  slug: careers-cfr
+- org: Brookings Institution
+  tier: C
+  ats: icims
+  slug: careers-brookings
+- org: American Enterprise Institute
+  tier: C
+  ats: icims
+  slug: careers-aei
+- org: Heritage Foundation
+  tier: C
+  ats: jazzhr
+  slug: heritage
+- org: New America
+  tier: C
+  ats: jazzhr
+  slug: newamerica
