@@ -12,6 +12,7 @@ __pycache__/
 
 node_modules/
 .vercel/
+scripts/browser/lightpanda
 
 .env
 .env.local
