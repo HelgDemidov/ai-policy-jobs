@@ -26,6 +26,18 @@
   source: himalayas
   query: AI governance
 
+# Узкие Himalayas-запросы, добавлены как дополнение к широким выше (не
+# замена — узкие режут охват в ~4 раза). Живьём измерено 2026-08-05
+# (docs/tech_specs/triage-and-autonomy/spec.md §2): 0% шума в тайтле на
+# обоих. См. docs/tech_specs/relevance-filtering/spec.md §5.
+- id: himalayas-technology-policy
+  source: himalayas
+  query: technology policy
+
+- id: himalayas-tech-policy
+  source: himalayas
+  query: tech policy
+
 - id: adzuna-thinktank-gb
   source: adzuna
   phrase: think tank
