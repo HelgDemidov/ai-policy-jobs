@@ -256,3 +256,46 @@
 - org: UNDP
   ats: oracle_fusion_hcm
   slug: "estm.fa.em2.oraclecloud.com:CX_1"
+
+# Волна 3 (2026-08-21) — 7 организаций, отложенных в волне 2 как «0 вакансий
+# на момент проверки, механизм не гадать» (docs/backlog/BACKLOG.md). Мысль
+# «не подключать, пока нет вакансии» была ошибочной — без подключения
+# появление вакансии и не узнать. Механизм для каждой подтверждён живьём на
+# структуре страницы (не на реальной вакансии, кроме IFRI, где вакансия
+# была) — стандартный no-selector эвристик html_scrape корректно возвращает
+# [] на пустом борде и подхватит первую же реальную ссылку без ручного
+# передобавления.
+- org: Ada Lovelace Institute
+  tier: B
+  ats: html_scrape
+  url: https://www.adalovelaceinstitute.org/about/jobs/
+- org: Egmont Institute
+  tier: B
+  ats: html_scrape
+  url: https://www.egmontinstitute.be/jobs-internships-and-opportunities/
+- org: CSDS (Brussels School of Governance)
+  tier: B
+  ats: html_scrape
+  url: https://csds.vub.be/vacancies/
+- org: IFRI — Centre for Geopolitics of Technology
+  tier: B
+  ats: html_scrape
+  url: https://www.ifri.org/en/recruitment
+  list_selector: .paragraph-spotlight  # верифицировано на живой вакансии (стажировка, 2026-08-21)
+- org: SIPRI
+  tier: B
+  # Прямая ссылка на ReachMee-виджет (не на sipri.org — там просто iframe на
+  # этот же URL). Живой plain-fetch без браузера отдаёт реальный контент
+  # ("There are no vacancies at the moment"), needs_browser не нужен.
+  # validator-токен встроен статически в шаблон sipri.org — стабилен, но
+  # теоретически может смениться при ротации на стороне ReachMee.
+  url: "https://web103.reachmee.com/ext/I021/1690/main?site=7&validator=9c16162aeec1b1c78db51d0c3e4163a1&lang=UK&ref="
+  ats: html_scrape
+- org: St.Gallen Endowment for Prosperity through Trade
+  tier: A  # remote-first по всему миру, без гео-ограничений (сайт org)
+  ats: html_scrape
+  url: https://join.com/companies/stgallen-endowment
+- org: interface (ex-SNV)
+  tier: B
+  ats: html_scrape
+  url: https://jobs.interface-eu.org/en
