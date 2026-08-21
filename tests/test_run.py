@@ -30,8 +30,17 @@ def _no_searches_path(tmp_path):
     """A deliberately nonexistent searches.yaml — without this, tests that
     don't care about the search loop would fall back to the real
     searches.yaml at repo root and fire real network requests against
-    Himalayas/Adzuna/JobSpy."""
+    Adzuna/JobSpy."""
     return tmp_path / "searches.yaml"
+
+
+def _no_filters_path(tmp_path):
+    """Same idiom as _no_searches_path, for config/filters.yaml — without
+    this, every test below would be evaluated against the real production
+    filter rules (relevance_filter.load_filters treats a missing path as
+    "no filtering", see its own tests) instead of the placeholder titles
+    ("Role") these tests actually use."""
+    return tmp_path / "filters.yaml"
 
 
 # --- ATS-family loop (unchanged behavior, searches loop is a no-op) --------
@@ -52,7 +61,10 @@ def test_orchestrates_multiple_orgs_and_upserts_each(tmp_path, monkeypatch):
     monkeypatch.setitem(run.CONNECTORS, "lever", lambda slug: [_posting("l1")])
     monkeypatch.setitem(run.CONNECTORS, "greenhouse", lambda slug: [_posting("g1")])
 
-    run.main(orgs_path=orgs_path, db_path=db_path, searches_path=_no_searches_path(tmp_path))
+    run.main(
+        orgs_path=orgs_path, db_path=db_path,
+        searches_path=_no_searches_path(tmp_path), filters_path=_no_filters_path(tmp_path),
+    )
 
     conn = store.open_db(db_path)
     rows = conn.execute("SELECT org, ats_id FROM postings ORDER BY org").fetchall()
@@ -78,7 +90,10 @@ def test_one_org_failure_does_not_stop_the_batch(tmp_path, monkeypatch, capsys):
 
     monkeypatch.setitem(run.CONNECTORS, "lever", fake_lever_fetch)
 
-    run.main(orgs_path=orgs_path, db_path=db_path, searches_path=_no_searches_path(tmp_path))
+    run.main(
+        orgs_path=orgs_path, db_path=db_path,
+        searches_path=_no_searches_path(tmp_path), filters_path=_no_filters_path(tmp_path),
+    )
 
     conn = store.open_db(db_path)
     rows = conn.execute("SELECT org FROM postings").fetchall()
@@ -98,8 +113,14 @@ def test_rerunning_main_is_idempotent(tmp_path, monkeypatch):
     db_path = tmp_path / "jobs.db"
     monkeypatch.setitem(run.CONNECTORS, "lever", lambda slug: [_posting("l1")])
 
-    run.main(orgs_path=orgs_path, db_path=db_path, searches_path=_no_searches_path(tmp_path))
-    run.main(orgs_path=orgs_path, db_path=db_path, searches_path=_no_searches_path(tmp_path))
+    run.main(
+        orgs_path=orgs_path, db_path=db_path,
+        searches_path=_no_searches_path(tmp_path), filters_path=_no_filters_path(tmp_path),
+    )
+    run.main(
+        orgs_path=orgs_path, db_path=db_path,
+        searches_path=_no_searches_path(tmp_path), filters_path=_no_filters_path(tmp_path),
+    )
 
     conn = store.open_db(db_path)
     count = conn.execute("SELECT COUNT(*) FROM postings").fetchone()[0]
@@ -118,20 +139,23 @@ def _empty_orgs_path(tmp_path):
 def test_search_specs_run_and_upsert_with_tier(tmp_path, monkeypatch):
     searches_path = tmp_path / "searches.yaml"
     searches_path.write_text(
-        yaml.safe_dump([{"id": "hima-policy", "source": "himalayas", "query": "policy"}])
+        yaml.safe_dump([{"id": "adzuna-check", "source": "adzuna", "phrase": "think tank", "country": "gb"}])
     )
     db_path = tmp_path / "jobs.db"
 
     monkeypatch.setitem(
-        run.SEARCH_CONNECTORS, "himalayas",
+        run.SEARCH_CONNECTORS, "adzuna",
         lambda spec: [_search_posting("h1", "R Street Institute", title="Policy Director")],
     )
 
-    run.main(orgs_path=_empty_orgs_path(tmp_path), db_path=db_path, searches_path=searches_path)
+    run.main(
+        orgs_path=_empty_orgs_path(tmp_path), db_path=db_path,
+        searches_path=searches_path, filters_path=_no_filters_path(tmp_path),
+    )
 
     conn = store.open_db(db_path)
     row = conn.execute("SELECT org, title, tier, source FROM postings WHERE ats_id='h1'").fetchone()
-    assert row == ("R Street Institute", "Policy Director", "A", "himalayas")  # himalayas -> tier A always
+    assert row == ("R Street Institute", "Policy Director", "B", "adzuna")  # adzuna+gb -> tier B
 
 
 def test_search_spec_failure_does_not_stop_the_batch(tmp_path, monkeypatch, capsys):
@@ -139,20 +163,25 @@ def test_search_spec_failure_does_not_stop_the_batch(tmp_path, monkeypatch, caps
     searches_path.write_text(
         yaml.safe_dump(
             [
-                {"id": "broken-search", "source": "himalayas", "query": "x"},
+                {"id": "broken-search", "source": "jobspy_linkedin", "query": "x"},
                 {"id": "fine-search", "source": "adzuna", "phrase": "think tank", "country": "gb"},
             ]
         )
     )
     db_path = tmp_path / "jobs.db"
 
-    monkeypatch.setitem(run.SEARCH_CONNECTORS, "himalayas", lambda spec: (_ for _ in ()).throw(RuntimeError("boom")))
+    monkeypatch.setitem(
+        run.SEARCH_CONNECTORS, "jobspy_linkedin", lambda spec: (_ for _ in ()).throw(RuntimeError("boom"))
+    )
     monkeypatch.setitem(
         run.SEARCH_CONNECTORS, "adzuna",
         lambda spec: [_search_posting("a1", "InfluenceMap", title="Analyst")],
     )
 
-    run.main(orgs_path=_empty_orgs_path(tmp_path), db_path=db_path, searches_path=searches_path)
+    run.main(
+        orgs_path=_empty_orgs_path(tmp_path), db_path=db_path,
+        searches_path=searches_path, filters_path=_no_filters_path(tmp_path),
+    )
 
     conn = store.open_db(db_path)
     rows = conn.execute("SELECT org FROM postings").fetchall()
@@ -173,7 +202,10 @@ def test_manual_search_spec_skipped_without_linkedin_flag(tmp_path, monkeypatch,
     calls = []
     monkeypatch.setitem(run.SEARCH_CONNECTORS, "jobspy_linkedin", lambda spec: calls.append(spec) or [])
 
-    run.main(orgs_path=_empty_orgs_path(tmp_path), db_path=db_path, searches_path=searches_path)
+    run.main(
+        orgs_path=_empty_orgs_path(tmp_path), db_path=db_path,
+        searches_path=searches_path, filters_path=_no_filters_path(tmp_path),
+    )
 
     assert calls == []  # connector never invoked
     captured = capsys.readouterr()
@@ -191,7 +223,10 @@ def test_manual_search_spec_runs_with_linkedin_flag(tmp_path, monkeypatch):
         lambda spec: [_search_posting("li1", "RAND Europe", title="Research Analyst")],
     )
 
-    run.main(orgs_path=_empty_orgs_path(tmp_path), db_path=db_path, searches_path=searches_path, run_linkedin=True)
+    run.main(
+        orgs_path=_empty_orgs_path(tmp_path), db_path=db_path, searches_path=searches_path,
+        filters_path=_no_filters_path(tmp_path), run_linkedin=True,
+    )
 
     conn = store.open_db(db_path)
     row = conn.execute("SELECT org FROM postings").fetchone()
@@ -203,15 +238,18 @@ def test_non_manual_search_specs_still_run_with_linkedin_flag(tmp_path, monkeypa
     replace it."""
     searches_path = tmp_path / "searches.yaml"
     searches_path.write_text(
-        yaml.safe_dump([{"id": "hima-policy", "source": "himalayas", "query": "policy"}])
+        yaml.safe_dump([{"id": "adzuna-check", "source": "adzuna", "phrase": "policy", "country": "gb"}])
     )
     db_path = tmp_path / "jobs.db"
     monkeypatch.setitem(
-        run.SEARCH_CONNECTORS, "himalayas",
+        run.SEARCH_CONNECTORS, "adzuna",
         lambda spec: [_search_posting("h1", "Acme", title="Role")],
     )
 
-    run.main(orgs_path=_empty_orgs_path(tmp_path), db_path=db_path, searches_path=searches_path, run_linkedin=True)
+    run.main(
+        orgs_path=_empty_orgs_path(tmp_path), db_path=db_path, searches_path=searches_path,
+        filters_path=_no_filters_path(tmp_path), run_linkedin=True,
+    )
 
     conn = store.open_db(db_path)
     assert conn.execute("SELECT COUNT(*) FROM postings").fetchone()[0] == 1
@@ -220,19 +258,25 @@ def test_non_manual_search_specs_still_run_with_linkedin_flag(tmp_path, monkeypa
 def test_search_loop_never_reconciles_missing_postings(tmp_path, monkeypatch):
     searches_path = tmp_path / "searches.yaml"
     searches_path.write_text(
-        yaml.safe_dump([{"id": "hima-policy", "source": "himalayas", "query": "policy"}])
+        yaml.safe_dump([{"id": "adzuna-check", "source": "adzuna", "phrase": "policy", "country": "gb"}])
     )
     db_path = tmp_path / "jobs.db"
     monkeypatch.setitem(
-        run.SEARCH_CONNECTORS, "himalayas",
+        run.SEARCH_CONNECTORS, "adzuna",
         lambda spec: [_search_posting("h1", "Acme", title="Role")],
     )
-    run.main(orgs_path=_empty_orgs_path(tmp_path), db_path=db_path, searches_path=searches_path)
+    run.main(
+        orgs_path=_empty_orgs_path(tmp_path), db_path=db_path,
+        searches_path=searches_path, filters_path=_no_filters_path(tmp_path),
+    )
 
     # Next run, the search comes back empty — unlike the ATS family, this
     # must NOT mark the posting likely_closed (see store.py docstring).
-    monkeypatch.setitem(run.SEARCH_CONNECTORS, "himalayas", lambda spec: [])
-    run.main(orgs_path=_empty_orgs_path(tmp_path), db_path=db_path, searches_path=searches_path)
+    monkeypatch.setitem(run.SEARCH_CONNECTORS, "adzuna", lambda spec: [])
+    run.main(
+        orgs_path=_empty_orgs_path(tmp_path), db_path=db_path,
+        searches_path=searches_path, filters_path=_no_filters_path(tmp_path),
+    )
 
     conn = store.open_db(db_path)
     status = conn.execute("SELECT status FROM postings WHERE ats_id='h1'").fetchone()[0]
@@ -249,7 +293,10 @@ def test_expire_stale_runs_after_search_loop_and_is_scoped(tmp_path, monkeypatch
     db_path = tmp_path / "jobs.db"
     monkeypatch.setitem(run.CONNECTORS, "lever", lambda slug: [_posting("l1")])
 
-    run.main(orgs_path=orgs_path, db_path=db_path, searches_path=_no_searches_path(tmp_path))
+    run.main(
+        orgs_path=orgs_path, db_path=db_path,
+        searches_path=_no_searches_path(tmp_path), filters_path=_no_filters_path(tmp_path),
+    )
 
     from datetime import datetime, timedelta, timezone
     conn = store.open_db(db_path)
@@ -258,7 +305,10 @@ def test_expire_stale_runs_after_search_loop_and_is_scoped(tmp_path, monkeypatch
     conn.commit()
     conn.close()
 
-    run.main(orgs_path=orgs_path, db_path=db_path, searches_path=_no_searches_path(tmp_path))
+    run.main(
+        orgs_path=orgs_path, db_path=db_path,
+        searches_path=_no_searches_path(tmp_path), filters_path=_no_filters_path(tmp_path),
+    )
 
     conn = store.open_db(db_path)
     status = conn.execute("SELECT status FROM postings WHERE ats_id='l1'").fetchone()[0]
@@ -277,7 +327,10 @@ def test_main_returns_1_when_every_attempted_source_fails(tmp_path, monkeypatch)
     db_path = tmp_path / "jobs.db"
     monkeypatch.setitem(run.CONNECTORS, "lever", lambda slug: (_ for _ in ()).throw(RuntimeError("boom")))
 
-    exit_code = run.main(orgs_path=orgs_path, db_path=db_path, searches_path=_no_searches_path(tmp_path))
+    exit_code = run.main(
+        orgs_path=orgs_path, db_path=db_path,
+        searches_path=_no_searches_path(tmp_path), filters_path=_no_filters_path(tmp_path),
+    )
 
     assert exit_code == 1
 
@@ -293,16 +346,19 @@ def test_main_returns_0_when_a_source_in_either_family_succeeds(tmp_path, monkey
     )
     searches_path = tmp_path / "searches.yaml"
     searches_path.write_text(
-        yaml.safe_dump([{"id": "hima-policy", "source": "himalayas", "query": "policy"}])
+        yaml.safe_dump([{"id": "adzuna-check", "source": "adzuna", "phrase": "policy", "country": "gb"}])
     )
     db_path = tmp_path / "jobs.db"
     monkeypatch.setitem(run.CONNECTORS, "lever", lambda slug: (_ for _ in ()).throw(RuntimeError("boom")))
     monkeypatch.setitem(
-        run.SEARCH_CONNECTORS, "himalayas",
+        run.SEARCH_CONNECTORS, "adzuna",
         lambda spec: [_search_posting("h1", "R Street Institute", title="Policy Director")],
     )
 
-    exit_code = run.main(orgs_path=orgs_path, db_path=db_path, searches_path=searches_path)
+    exit_code = run.main(
+        orgs_path=orgs_path, db_path=db_path,
+        searches_path=searches_path, filters_path=_no_filters_path(tmp_path),
+    )
 
     assert exit_code == 0
 
@@ -312,7 +368,10 @@ def test_main_returns_0_when_config_is_completely_empty(tmp_path):
     orgs_path.write_text("[]")
     db_path = tmp_path / "jobs.db"
 
-    exit_code = run.main(orgs_path=orgs_path, db_path=db_path, searches_path=_no_searches_path(tmp_path))
+    exit_code = run.main(
+        orgs_path=orgs_path, db_path=db_path,
+        searches_path=_no_searches_path(tmp_path), filters_path=_no_filters_path(tmp_path),
+    )
 
     assert exit_code == 0  # nothing attempted is not the same as everything failing
 
@@ -326,6 +385,61 @@ def test_main_returns_0_when_only_manual_specs_exist_and_are_skipped(tmp_path):
     )
     db_path = tmp_path / "jobs.db"
 
-    exit_code = run.main(orgs_path=_empty_orgs_path(tmp_path), db_path=db_path, searches_path=searches_path)
+    exit_code = run.main(
+        orgs_path=_empty_orgs_path(tmp_path), db_path=db_path,
+        searches_path=searches_path, filters_path=_no_filters_path(tmp_path),
+    )
 
     assert exit_code == 0
+
+
+# --- relevance filtering (docs/tech_specs/relevance-filtering/spec.md) -----
+
+
+def test_org_family_posting_filtered_out_never_reaches_store(tmp_path, monkeypatch, capsys):
+    orgs_path = tmp_path / "orgs.yaml"
+    orgs_path.write_text(
+        yaml.safe_dump([{"org": "Acme", "tier": "A", "ats": "lever", "slug": "acme"}])
+    )
+    db_path = tmp_path / "jobs.db"
+    filters_path = tmp_path / "filters.yaml"
+    filters_path.write_text("title_exclude_any: [intern]\n")
+    monkeypatch.setitem(
+        run.CONNECTORS, "lever",
+        lambda slug: [_posting("keep", title="Policy Analyst"), _posting("drop", title="Policy Intern")],
+    )
+
+    run.main(orgs_path=orgs_path, db_path=db_path, searches_path=_no_searches_path(tmp_path), filters_path=filters_path)
+
+    conn = store.open_db(db_path)
+    rows = conn.execute("SELECT ats_id FROM postings").fetchall()
+    assert rows == [("keep",)]
+
+    captured = capsys.readouterr()
+    assert "1 filtered" in captured.out
+
+
+def test_search_family_posting_filtered_out_never_reaches_store(tmp_path, monkeypatch):
+    searches_path = tmp_path / "searches.yaml"
+    searches_path.write_text(
+        yaml.safe_dump([{"id": "adzuna-check", "source": "adzuna", "phrase": "policy", "country": "gb"}])
+    )
+    db_path = tmp_path / "jobs.db"
+    filters_path = tmp_path / "filters.yaml"
+    filters_path.write_text("org_blocklist: [Spammy Recruiter]\n")
+    monkeypatch.setitem(
+        run.SEARCH_CONNECTORS, "adzuna",
+        lambda spec: [
+            _search_posting("keep", "R Street Institute", title="Policy Director"),
+            _search_posting("drop", "Spammy Recruiter", title="Policy Analyst"),
+        ],
+    )
+
+    run.main(
+        orgs_path=_empty_orgs_path(tmp_path), db_path=db_path,
+        searches_path=searches_path, filters_path=filters_path,
+    )
+
+    conn = store.open_db(db_path)
+    rows = conn.execute("SELECT ats_id FROM postings").fetchall()
+    assert rows == [("keep",)]

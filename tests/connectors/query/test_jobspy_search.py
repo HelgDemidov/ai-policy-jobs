@@ -67,33 +67,6 @@ def test_fetch_linkedin_respects_fetch_description_override(monkeypatch):
     assert calls["linkedin_fetch_description"] is True
 
 
-def test_fetch_indeed_uses_indeed_site_and_country(monkeypatch):
-    calls = {}
-
-    def fake_scrape_jobs(**kwargs):
-        calls.update(kwargs)
-        return _df([])
-
-    monkeypatch.setattr(jobspy_search, "scrape_jobs", fake_scrape_jobs)
-    jobspy_search.fetch_indeed({"query": "policy", "location": "London", "country_indeed": "UK"})
-
-    assert calls["site_name"] == ["indeed"]
-    assert calls["country_indeed"] == "UK"
-
-
-def test_fetch_indeed_defaults_country_to_usa(monkeypatch):
-    calls = {}
-
-    def fake_scrape_jobs(**kwargs):
-        calls.update(kwargs)
-        return _df([])
-
-    monkeypatch.setattr(jobspy_search, "scrape_jobs", fake_scrape_jobs)
-    jobspy_search.fetch_indeed({"query": "policy"})
-
-    assert calls["country_indeed"] == "USA"
-
-
 def test_is_remote_true_sets_workplace_type(monkeypatch):
     row = dict(FULL_ROW)
     row["is_remote"] = True
@@ -168,7 +141,6 @@ def test_empty_dataframe_returns_empty_list(monkeypatch):
     monkeypatch.setattr(jobspy_search, "scrape_jobs", lambda **_kw: _df([]))
 
     assert jobspy_search.fetch_linkedin({"query": "x"}) == []
-    assert jobspy_search.fetch_indeed({"query": "x"}) == []
 
 
 def test_ats_id_falls_back_to_job_url_when_id_missing(monkeypatch):

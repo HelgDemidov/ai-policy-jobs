@@ -1,0 +1,92 @@
+# Детерминированный фильтр релевантности — applied между fetch() коннектора и
+# store.py's upsert (scripts/relevance_filter.py), до записи в БД. Ниша:
+# policy-аналитика/исследования на пересечении emerging tech/AI/глобальной
+# безопасности в think tank'ах, международных организациях, изредка —
+# policy-research подразделениях крупных международных компаний. Детали и
+# design rationale — docs/tech_specs/relevance-filtering/spec.md.
+#
+# Стартовый список, откалиброван на живых примерах шума диагностической
+# сессии 2026-08-21 — НЕ финал. Ожидается итеративная правка после каждого
+# живого прогона по факту всплывшего шума, не заранее.
+#
+# Известный и принятый предел: keyword-матчинг по org+title не различает
+# «правильный» институт от «похожего по названию тайтла, но не того»
+# института (например AI Governance Lead в think tank'е vs в страховой
+# компании) — см. spec §0/Design rationale. Этот класс случаев — будущая
+# зона LLM-триажа (docs/tech_specs/triage-and-autonomy/spec.md), не этого
+# фильтра.
+
+# substring-match по полю org, регистронезависимо
+org_blocklist:
+  - "Digital Technology Institute for Development"   # спам-волонтёрка, adzuna
+  - "Anson McCade"                                    # рекрутер
+  - "Ethos"                                           # gig-платформа
+  - "mercor"                                          # gig-платформа
+  - recruitment                                       # калибровка 2026-08-21: Deekay/Harnham/Diagonal recruitment
+  - "Crossing Hurdles"                                # калибровка 2026-08-21: gig-платформа ($/hr в тайтле)
+  - "Consultancy.uk"                                  # калибровка 2026-08-21: СМИ про консалтинг-индустрию, не работодатель
+  - "The Health Foundation"                           # калибровка 2026-08-21: healthcare charity, не наша ниша
+  - "Lewisham Council"                                # калибровка 2026-08-21: муниципалитет
+  - "Youth Employment UK"                             # калибровка 2026-08-21: youth employment, не наша ниша
+
+# тайтл должен содержать ХОТЯ БЫ ОДНО (substring, регистронезависимо)
+title_require_any:
+  - policy
+  - governance
+  - regulat        # regulation / regulatory
+  - strateg        # strategy / strategic
+  - research
+  - fellow
+  - analyst
+  - advisor
+  - "program officer"
+
+# тайтл НЕ должен содержать НИ ОДНОГО (substring, регистронезависимо)
+title_exclude_any:
+  - engineer
+  - developer
+  - architect
+  - software
+  - devops
+  - intern
+  - "office manager"
+  - accountant
+  - talent
+  - recruiter
+  # sales
+  - sales
+  - "account executive"
+  - "account manager"
+  - "business development"
+  - development
+  - "customer success"
+  - "key account"
+  # compliance
+  - compliance
+  - audit
+  - "risk officer"
+  - grc
+  - kyc
+  - aml
+  # B2B-менеджерские
+  - "relationship manager"
+  - "client manager"
+  - "channel manager"
+  - b2b
+  - partner
+  # прочее
+  - "administrative assistant"
+  - "executive assistant"
+  - insurance
+  - underwrit
+  - "medical policy"
+  - "healthcare policy"
+  - claims
+  - medicaid   # калибровка 2026-08-21: BerryDunn/K.L. Scott — US-здравоохранение, не наша ниша
+  # калибровка 2026-08-21, второй раунд (по факту 80-строчного остатка после
+  # удаления Himalayas/jobspy_indeed) — не тот домен policy, а не не тот институт
+  - poverty
+  - "natural resources"
+  - housing
+  - fraud
+  - "hedge fund"

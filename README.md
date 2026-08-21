@@ -15,7 +15,7 @@ a daily `scripts/run.py` run (systemd timer):
 - **Org-centric** — known organizations polled directly against their ATS:
   Lever, Greenhouse, Personio.
 - **Query-centric** — search-term-driven aggregators that surface orgs not
-  already on the shortlist: Himalayas, Adzuna, JobSpy (LinkedIn/Indeed).
+  already on the shortlist: Adzuna, JobSpy (LinkedIn).
 
 `store.py` handles dedup/reconciliation; `postgres_sync.py` mirrors the
 result into Neon Postgres for the web GUI.

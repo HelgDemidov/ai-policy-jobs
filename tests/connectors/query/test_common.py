@@ -2,10 +2,6 @@
 from connectors.query import common as query_common
 
 
-def test_himalayas_is_always_tier_a():
-    assert query_common.derive_tier("himalayas", {}, {}) == "A"
-
-
 def test_adzuna_western_europe_country_is_tier_b():
     assert query_common.derive_tier("adzuna", {"country": "gb"}, {}) == "B"
     assert query_common.derive_tier("adzuna", {"country": "be"}, {}) == "B"
@@ -23,7 +19,6 @@ def test_adzuna_unknown_country_is_none():
 def test_jobspy_remote_posting_is_tier_a_regardless_of_spec_location():
     posting = {"workplace_type": "remote"}
     assert query_common.derive_tier("jobspy_linkedin", {"location": "United States"}, posting) == "A"
-    assert query_common.derive_tier("jobspy_indeed", {}, posting) == "A"
 
 
 def test_jobspy_non_remote_uses_spec_location_not_posting_location():
@@ -33,7 +28,7 @@ def test_jobspy_non_remote_uses_spec_location_not_posting_location():
 
 def test_jobspy_us_location_is_tier_c():
     posting = {"workplace_type": None}
-    assert query_common.derive_tier("jobspy_indeed", {"location": "United States"}, posting) == "C"
+    assert query_common.derive_tier("jobspy_linkedin", {"location": "United States"}, posting) == "C"
 
 
 def test_jobspy_unknown_location_is_none():

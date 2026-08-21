@@ -21,9 +21,6 @@ US_KEYWORDS = ("united states", "usa")
 
 
 def derive_tier(source: str, spec: dict, posting: dict) -> str | None:
-    if source == "himalayas":
-        return "A"  # remote-only board by definition
-
     if source == "adzuna":
         country = (spec.get("country") or "").lower()
         if country in ADZUNA_TIER_B_COUNTRIES:
@@ -32,7 +29,7 @@ def derive_tier(source: str, spec: dict, posting: dict) -> str | None:
             return "C"
         return None
 
-    if source in ("jobspy_linkedin", "jobspy_indeed"):
+    if source == "jobspy_linkedin":
         if posting.get("workplace_type") == "remote":
             return "A"
         location = (spec.get("location") or "").lower()
