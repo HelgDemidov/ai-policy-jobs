@@ -21,12 +21,20 @@ uv pip install -r requirements.txt -r requirements-dev.txt  # Python-завис�
 npm install                                                  # eslint (для web/public/**/*.js)
 ```
 
+**Опционально: headless-browser resolver** (`scripts/browser_resolver.py`, нужен только коннектору `icims` — обходит AWS WAF JS-челлендж, `docs/tech_specs/point-source-connectors/spec.md` §1). Отдельное Node-дерево, не связанное с eslint-package.json выше:
+```bash
+cd scripts/browser && PUPPETEER_SKIP_DOWNLOAD=1 npm install
+curl -L -o lightpanda https://github.com/lightpanda-io/browser/releases/download/nightly/lightpanda-x86_64-linux
+chmod +x lightpanda
+```
+Без этого — `browser_resolver.is_available()` вернёт `False`, `run.py` просто залогирует ошибку по затронутым org-записям и продолжит остальной прогон (не блокер).
+
 ## Запуск
 
 ```bash
 .venv/bin/python scripts/run.py            # синхронизация: все ATS + все search-источники, включая LinkedIn
 .venv/bin/python scripts/run.py --linkedin  # то же (флаг включает спеки с manual: true — сейчас таких нет)
-.venv/bin/pytest                            # тесты (104+, герметично)
+.venv/bin/pytest                            # тесты (200+, герметично)
 .venv/bin/ruff check .                      # линт Python (чисто)
 .venv/bin/mypy scripts web                  # типы Python (чисто)
 npx eslint .                                # линт JS (web/public/**/*.js)
@@ -116,7 +124,7 @@ sqlite3 data/jobs.db "SELECT org, title, status FROM postings WHERE status='new'
 
 ## Конфиги (правятся вручную, без кода)
 
-- `config/orgs.yaml` — организации для ATS-коннекторов: `{org, tier, ats: lever|greenhouse|personio, slug}`.
-- `config/searches.yaml` — поисковые запросы: `{id, source: adzuna|jobspy_linkedin, query/phrase, country/location, manual: true (опц.)}`.
+- `config/orgs.yaml` — организации для ATS-коннекторов: `{org, tier, ats: lever|greenhouse|personio|smartrecruiters|teamtailor|workable|pinpoint|icims|jazzhr, slug}`. Отдельно `ats: html_scrape`: `{org, tier, ats: html_scrape, url, list_selector (опц.)}` — без `slug`, см. `scripts/connectors/ats/html_scrape.py`.
+- `config/searches.yaml` — поисковые запросы: `{id, source: adzuna|jobspy_linkedin|un_secretariat, query/phrase, country/location, manual: true (опц.)}`. Отдельно `source: un_secretariat`: `{id, source: un_secretariat, dept_allowlist: [...]}` — точные значения поля `dept.name` из `careers.un.org`, см. `scripts/connectors/query/un_secretariat.py`.
 
 Детали и живые уроки по каждому источнику — `docs/backlog/BACKLOG.md`, `docs/job-aggregator-landscape/notes.md`.
