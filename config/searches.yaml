@@ -32,9 +32,3 @@
   source: jobspy_linkedin
   query: AI policy analyst
   location: United Kingdom
-
-- id: jobspy-indeed-uk
-  source: jobspy_indeed
-  query: '"AI policy" OR "AI governance"'
-  location: United Kingdom
-  country_indeed: UK

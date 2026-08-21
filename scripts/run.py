@@ -33,7 +33,6 @@ CONNECTORS = {"lever": lever.fetch, "greenhouse": greenhouse.fetch, "personio": 
 SEARCH_CONNECTORS = {
     "adzuna": adzuna.fetch,
     "jobspy_linkedin": jobspy_search.fetch_linkedin,
-    "jobspy_indeed": jobspy_search.fetch_indeed,
 }
 
 

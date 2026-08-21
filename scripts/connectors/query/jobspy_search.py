@@ -1,11 +1,13 @@
-"""JobSpy wrapper — query-centric connectors across LinkedIn and Indeed via
-the python-jobspy scraping library (github.com/speedyapply/JobSpy).
+"""JobSpy wrapper — query-centric LinkedIn connector via the python-jobspy
+scraping library (github.com/speedyapply/JobSpy).
 
-Two separate fetch functions, not one parameterized by site, so each gets
-its own `source` value in the DB — LinkedIn and Indeed have very different
-reliability/relevance profiles in live testing (see
-docs/job-aggregator-landscape/notes.md): LinkedIn found the single best match of
-any source tested (RAND Europe).
+Was two fetch functions (LinkedIn + Indeed) until 2026-08-21: `fetch_indeed`
+removed along with the `jobspy_indeed` source entirely — 40/219 rows post-filter
+(18% of DB volume) for ~5% precision, tied for the worst of any source, and
+its only two near-hits were duplicates of postings jobspy_linkedin already
+had (docs/tech_specs/relevance-filtering/spec.md addendum). LinkedIn's own
+live-testing track record is the opposite: single best match of any source
+tested (RAND Europe) — see docs/job-aggregator-landscape/notes.md.
 
 LinkedIn was gated behind run.py's `--linkedin` flag until 2026-07-25 over
 ToS/rate-limit concerns, then un-gated: the call is unauthenticated (no
@@ -13,11 +15,6 @@ account of ours is involved — a rate limit costs us an empty result set for
 that run, not a ban) and `linkedin_fetch_description` defaults to False, so
 one run is ~2-3 requests. The real cost knob is `fetch_description: true` in
 searches.yaml — it issues one request PER POSTING (~20x a run). Leave it off.
-
-Query lesson from live testing: Indeed does broad OR-of-words matching on
-an unquoted search_term — use quoted phrases in searches.yaml
-(e.g. '"AI policy" OR "AI governance"'), or single words like "analyst"
-alone will match almost anything.
 """
 import pandas as pd
 from jobspy import scrape_jobs
@@ -69,19 +66,6 @@ def fetch_linkedin(spec: dict) -> list[dict]:
         location=spec.get("location"),
         results_wanted=RESULTS_WANTED,
         linkedin_fetch_description=spec.get("fetch_description", False),
-    )
-    if df.empty:
-        return []
-    return [p for p in (_row_to_posting(row) for _, row in df.iterrows()) if p is not None]
-
-
-def fetch_indeed(spec: dict) -> list[dict]:
-    df = scrape_jobs(
-        site_name=["indeed"],
-        search_term=spec["query"],
-        location=spec.get("location"),
-        results_wanted=RESULTS_WANTED,
-        country_indeed=spec.get("country_indeed", "USA"),
     )
     if df.empty:
         return []

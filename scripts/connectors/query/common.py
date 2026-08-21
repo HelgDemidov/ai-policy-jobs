@@ -29,7 +29,7 @@ def derive_tier(source: str, spec: dict, posting: dict) -> str | None:
             return "C"
         return None
 
-    if source in ("jobspy_linkedin", "jobspy_indeed"):
+    if source == "jobspy_linkedin":
         if posting.get("workplace_type") == "remote":
             return "A"
         location = (spec.get("location") or "").lower()

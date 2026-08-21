@@ -117,6 +117,6 @@ sqlite3 data/jobs.db "SELECT org, title, status FROM postings WHERE status='new'
 ## Конфиги (правятся вручную, без кода)
 
 - `config/orgs.yaml` — организации для ATS-коннекторов: `{org, tier, ats: lever|greenhouse|personio, slug}`.
-- `config/searches.yaml` — поисковые запросы: `{id, source: adzuna|jobspy_linkedin|jobspy_indeed, query/phrase, country/location, manual: true (опц.)}`.
+- `config/searches.yaml` — поисковые запросы: `{id, source: adzuna|jobspy_linkedin, query/phrase, country/location, manual: true (опц.)}`.
 
 Детали и живые уроки по каждому источнику — `docs/backlog/BACKLOG.md`, `docs/job-aggregator-landscape/notes.md`.

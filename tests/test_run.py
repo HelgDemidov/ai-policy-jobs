@@ -163,7 +163,7 @@ def test_search_spec_failure_does_not_stop_the_batch(tmp_path, monkeypatch, caps
     searches_path.write_text(
         yaml.safe_dump(
             [
-                {"id": "broken-search", "source": "jobspy_indeed", "query": "x"},
+                {"id": "broken-search", "source": "jobspy_linkedin", "query": "x"},
                 {"id": "fine-search", "source": "adzuna", "phrase": "think tank", "country": "gb"},
             ]
         )
@@ -171,7 +171,7 @@ def test_search_spec_failure_does_not_stop_the_batch(tmp_path, monkeypatch, caps
     db_path = tmp_path / "jobs.db"
 
     monkeypatch.setitem(
-        run.SEARCH_CONNECTORS, "jobspy_indeed", lambda spec: (_ for _ in ()).throw(RuntimeError("boom"))
+        run.SEARCH_CONNECTORS, "jobspy_linkedin", lambda spec: (_ for _ in ()).throw(RuntimeError("boom"))
     )
     monkeypatch.setitem(
         run.SEARCH_CONNECTORS, "adzuna",
