@@ -122,3 +122,135 @@
   tier: B
   ats: html_scrape
   url: https://simoninstitute.ch/jobs
+
+# Донабор — волна 2 (2026-08-21, docs/think-tank-io-source-sweep/notes.md).
+# Донабор zero-cost — уже поддерживаемые платформы, просто новые слаги.
+- org: Data & Society
+  tier: C
+  ats: greenhouse
+  slug: datasocietyresearchinstitute
+- org: Code for America
+  tier: C
+  ats: greenhouse
+  slug: codeforamerica
+- org: Manhattan Institute
+  tier: C
+  ats: greenhouse
+  slug: manhattaninstituteforpolicyresearchinc
+- org: CSIS
+  tier: C
+  ats: greenhouse
+  slug: centerforstrategicandinternationalstudiesinc
+- org: R Street Institute
+  tier: C
+  ats: jazzhr
+  slug: street
+- org: Americans for Responsible Innovation
+  tier: C
+  ats: greenhouse
+  slug: americansforresponsibleinnovationltd
+
+# html_scrape + list_selector, все проверены на реальных вакансиях.
+- org: IAPS
+  tier: A
+  ats: html_scrape
+  url: https://www.iaps.ai/careers
+  list_selector: "#block-15fb537c504c1199a64c"
+- org: GovAI
+  tier: B
+  ats: html_scrape
+  url: https://www.governance.ai/opportunities
+  list_selector: "ul.list"
+- org: CSER
+  tier: B
+  ats: html_scrape
+  url: https://www.cser.ac.uk/people/join-us/
+  list_selector: "div.text-column.contentArea ul"
+- org: Bruegel
+  tier: B
+  ats: html_scrape
+  url: https://www.bruegel.org/careers/
+  list_selector: "div.o-content-from-editor"
+- org: DGAP
+  tier: B
+  ats: html_scrape
+  url: https://dgap.org/de/jobs
+  list_selector: "div.view-dgap-job-offers"
+- org: UNESCO
+  tier: B
+  ats: html_scrape
+  url: https://careers.unesco.org/go/All-jobs-openings/784002/
+  list_selector: "td.colTitle"
+- org: OSCE
+  tier: B
+  ats: html_scrape
+  url: https://vacancies.osce.org/
+  list_selector: "div.job_list_row"
+- org: Bertelsmann Stiftung
+  tier: B
+  ats: html_scrape
+  url: https://jobsearch.createyourowncareer.com/BertelsmannStiftung/search/
+  list_selector: "table.searchResults tbody"
+- org: Bipartisan Policy Center
+  tier: C
+  ats: html_scrape
+  url: https://bipartisanpolicy.freshteam.com/jobs
+  list_selector: "div.job-role-list"
+- org: ITIF
+  tier: C
+  ats: html_scrape
+  url: "https://recruitingbypaycor.com/career/CareerHome.action?clientId=8a7883c67ce7e82c017d2a86de7b1592"
+  list_selector: "td.gnewtonJobLink a"
+  use_browser_ua: true
+- org: Aspen Digital
+  tier: C
+  ats: html_scrape
+  url: "https://aspeninstitute.hrmdirect.com/employment/job-openings.php?search=true&dept=165117"
+  list_selector: "td.posTitle"
+# needs_browser: true — JS-rendered listing, plain requests only gets a shell (§1 spec).
+- org: Clingendael Institute
+  tier: B
+  ats: html_scrape
+  url: https://careers.clingendael.org/vacancy-jobs/overview-jobs-extern
+  list_selector: 'a[href*="vacancy-job-2"]'
+  needs_browser: true
+- org: WIPO
+  tier: B
+  ats: html_scrape
+  url: https://wipo.taleo.net/careersection/wp_2/jobsearch.ftl?lang=en
+  list_selector: 'div.jobListPanel a[href*="jobdetail"]'
+  needs_browser: true
+
+# Новые платформенные коннекторы (7 организаций, 6 платформ).
+- org: Centre for Future Generations
+  tier: B
+  ats: bamboohr
+  slug: stichtingicfg
+- org: Center for Democracy and Technology
+  tier: C
+  ats: recruiterbox
+  slug: cdt
+- org: World Economic Forum — Centre for the Fourth Industrial Revolution
+  tier: B
+  ats: workday
+  slug: "weforum:Forum_Careers"
+- org: Atlantic Council
+  tier: C
+  ats: wp_json
+  url: https://www.atlanticcouncil.org
+  post_type: job-opportunity
+- org: UN Global Pulse
+  tier: A
+  ats: wp_json
+  url: https://www.unglobalpulse.org
+  post_type: job-listings
+- org: Carnegie Endowment for International Peace
+  tier: C
+  ats: applicantpro
+  slug: "carnegieendowment:2306"
+# Глобальный борд (156 вакансий по всему миру, включая гео вне скоупа
+# куратора) — фиксированный tier для org-centric семьи здесь не подходит,
+# сознательно не проставлен (nullable), сверять по вакансии.
+- org: UNDP
+  ats: oracle_fusion_hcm
+  slug: "estm.fa.em2.oraclecloud.com:CX_1"
