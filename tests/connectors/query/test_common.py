@@ -75,3 +75,43 @@ def test_recruitee_us_location_is_tier_c():
 def test_recruitee_unrecognized_location_is_none():
     posting = {"workplace_type": None, "location": "Putrajaya, Malaysia"}
     assert query_common.derive_tier("recruitee", {}, posting) is None
+
+
+def test_oracle_fusion_hcm_remote_posting_is_tier_a():
+    posting = {"workplace_type": "remote", "location": "Anywhere"}
+    assert query_common.derive_tier("oracle_fusion_hcm", {}, posting) == "A"
+
+
+def test_oracle_fusion_hcm_western_europe_location_is_tier_b():
+    posting = {"workplace_type": None, "location": "Bonn, Germany"}
+    assert query_common.derive_tier("oracle_fusion_hcm", {}, posting) == "B"
+
+
+def test_oracle_fusion_hcm_us_location_is_tier_c():
+    posting = {"workplace_type": None, "location": "New York, United States"}
+    assert query_common.derive_tier("oracle_fusion_hcm", {}, posting) == "C"
+
+
+def test_oracle_fusion_hcm_unrecognized_location_is_none():
+    posting = {"workplace_type": None, "location": "Dhaka, Bangladesh"}
+    assert query_common.derive_tier("oracle_fusion_hcm", {}, posting) is None
+
+
+def test_oracle_fusion_hcm_ukraine_is_not_mistaken_for_uk():
+    # "uk" is a WESTERN_EUROPE_KEYWORDS entry — plain substring search
+    # would false-positive on "Ukraine" (live bug found 2026-08-21
+    # backfilling UNDP's actual locations: Kyiv, Ukraine -> wrongly "B").
+    posting = {"workplace_type": None, "location": "Kyiv, Ukraine"}
+    assert query_common.derive_tier("oracle_fusion_hcm", {}, posting) is None
+
+
+def test_oracle_fusion_hcm_lusaka_is_not_mistaken_for_usa():
+    # "usa" is a US_KEYWORDS entry — plain substring search would
+    # false-positive on "Lusaka" and "Jerusalem" (same live bug).
+    posting = {"workplace_type": None, "location": "Lusaka, Zambia"}
+    assert query_common.derive_tier("oracle_fusion_hcm", {}, posting) is None
+
+
+def test_oracle_fusion_hcm_jerusalem_is_not_mistaken_for_usa():
+    posting = {"workplace_type": None, "location": "East Jerusalem, Palestine, State of"}
+    assert query_common.derive_tier("oracle_fusion_hcm", {}, posting) is None

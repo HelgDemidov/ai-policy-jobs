@@ -105,6 +105,13 @@ def _run_org_connectors(conn, orgs_path: Path, filters: dict) -> tuple[int, int,
             source_ref = entry.get("url") or entry.get("slug")
             print(f"  ! {entry['org']} ({entry['ats']}:{source_ref}) — failed: {exc}")
             continue
+        if entry.get("tier") is None:
+            # No single fixed tier fits this org (global board — see the
+            # orgs.yaml comment on its entry) — derive one per posting from
+            # its own location/workplace_type instead, same heuristic the
+            # query-centric family uses.
+            for p in postings:
+                p["tier"] = query_common.derive_tier(entry["ats"], entry, p)
         passing, filtered = _filter_out(postings, lambda _p: entry["org"], filters)
         new_count = store.upsert_postings(conn, entry["org"], entry.get("tier"), entry["ats"], passing)
         total_new += new_count

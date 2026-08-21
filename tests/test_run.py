@@ -140,6 +140,53 @@ def test_orchestrates_multiple_orgs_and_upserts_each(tmp_path, monkeypatch):
     assert rows == [("Acme", "l1"), ("Beta", "g1")]
 
 
+def test_org_entry_with_no_tier_derives_it_per_posting(tmp_path, monkeypatch):
+    # UNDP/oracle_fusion_hcm shape: orgs.yaml deliberately omits `tier`
+    # (global board) — run.py must fall back to query_common.derive_tier
+    # per posting instead of leaving every row's tier NULL.
+    orgs_path = tmp_path / "orgs.yaml"
+    orgs_path.write_text(
+        yaml.safe_dump(
+            [{"org": "UNDP", "ats": "oracle_fusion_hcm", "slug": "host:CX_1"}]
+        )
+    )
+    db_path = tmp_path / "jobs.db"
+    monkeypatch.setitem(
+        run.CONNECTORS, "oracle_fusion_hcm",
+        lambda slug: [
+            _posting("u1", title="Role Bonn", location="Bonn, Germany"),
+            _posting("u2", title="Role Dhaka", location="Dhaka, Bangladesh"),
+        ],
+    )
+
+    run.main(
+        orgs_path=orgs_path, db_path=db_path,
+        searches_path=_no_searches_path(tmp_path), filters_path=_no_filters_path(tmp_path),
+    )
+
+    conn = store.open_db(db_path)
+    rows = dict(conn.execute("SELECT ats_id, tier FROM postings").fetchall())
+    assert rows == {"u1": "B", "u2": None}  # Bonn -> Western Europe; Dhaka -> unrecognized
+
+
+def test_org_entry_with_fixed_tier_is_unaffected(tmp_path, monkeypatch):
+    orgs_path = tmp_path / "orgs.yaml"
+    orgs_path.write_text(
+        yaml.safe_dump([{"org": "Acme", "tier": "A", "ats": "lever", "slug": "acme"}])
+    )
+    db_path = tmp_path / "jobs.db"
+    monkeypatch.setitem(run.CONNECTORS, "lever", lambda slug: [_posting("l1", location="Dhaka, Bangladesh")])
+
+    run.main(
+        orgs_path=orgs_path, db_path=db_path,
+        searches_path=_no_searches_path(tmp_path), filters_path=_no_filters_path(tmp_path),
+    )
+
+    conn = store.open_db(db_path)
+    tier = conn.execute("SELECT tier FROM postings WHERE ats_id='l1'").fetchone()[0]
+    assert tier == "A"  # fixed batch tier used as-is, no per-posting derivation attempted
+
+
 def test_one_org_failure_does_not_stop_the_batch(tmp_path, monkeypatch, capsys):
     orgs_path = tmp_path / "orgs.yaml"
     orgs_path.write_text(

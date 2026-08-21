@@ -250,7 +250,9 @@
   slug: "carnegieendowment:2306"
 # Глобальный борд (156 вакансий по всему миру, включая гео вне скоупа
 # куратора) — фиксированный tier для org-centric семьи здесь не подходит,
-# сознательно не проставлен (nullable), сверять по вакансии.
+# сознательно не проставлен (nullable). run.py выводит tier по каждой
+# вакансии отдельно через query_common.derive_tier (по location/
+# workplace_type), как у query-centric коннекторов.
 - org: UNDP
   ats: oracle_fusion_hcm
   slug: "estm.fa.em2.oraclecloud.com:CX_1"

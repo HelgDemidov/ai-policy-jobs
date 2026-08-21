@@ -150,11 +150,17 @@ def open_db(path: Path | None = None) -> sqlite3.Connection:
 
 
 def upsert_postings(conn: sqlite3.Connection, org: str, tier: str | None, source: str, postings: list[dict]) -> int:
+    """`tier` is the fixed default for this org-connector batch. A posting
+    may override it with its own `p["tier"]` — used by org-centric
+    connectors covering a global board with no single fixed tier (UNDP's
+    oracle_fusion_hcm; run.py derives it per-posting via
+    connectors.query.common.derive_tier before calling this)."""
     now = datetime.now(timezone.utc).isoformat()
     new_count = 0
     seen_ids = []
     for p in postings:
         seen_ids.append(p["ats_id"])
+        posting_tier = p.get("tier", tier)
         row = conn.execute(
             "SELECT id FROM postings WHERE source=? AND ats_id=?",
             (source, p["ats_id"]),
@@ -175,7 +181,7 @@ def upsert_postings(conn: sqlite3.Connection, org: str, tier: str | None, source
                        (org, tier, source, ats_id, title, location, workplace_type,
                         team, commitment, url, description, posted_at, first_seen, last_seen, status, dedup_key)
                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'new', ?)""",
-                    (org, tier, source, p["ats_id"], p["title"], p.get("location"),
+                    (org, posting_tier, source, p["ats_id"], p["title"], p.get("location"),
                      p.get("workplace_type"), p.get("team"), p.get("commitment"),
                      p["url"], p.get("description"), p.get("posted_at"), now, now,
                      dedup_key),

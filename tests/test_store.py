@@ -50,6 +50,28 @@ def test_insert_new_postings(tmp_path):
     assert all(r[1] == "new" for r in rows)
 
 
+def test_posting_tier_override_wins_over_batch_default(tmp_path):
+    # Org-centric connectors covering a global board (UNDP/oracle_fusion_hcm)
+    # pass tier=None for the batch and let run.py set p["tier"] per posting
+    # instead — mirrors upsert_search_postings' per-posting tier.
+    conn = store.open_db(tmp_path / "jobs.db")
+    store.upsert_postings(
+        conn, "UNDP", None, "oracle_fusion_hcm",
+        [_posting("1", tier="B"), _posting("2", tier=None)],
+    )
+
+    rows = dict(conn.execute("SELECT ats_id, tier FROM postings").fetchall())
+    assert rows == {"1": "B", "2": None}
+
+
+def test_batch_tier_used_when_posting_carries_none(tmp_path):
+    conn = store.open_db(tmp_path / "jobs.db")
+    store.upsert_postings(conn, "Acme", "A", "lever", [_posting("1")])
+
+    tier = conn.execute("SELECT tier FROM postings WHERE ats_id='1'").fetchone()[0]
+    assert tier == "A"  # unaffected: _posting() doesn't set "tier", batch default applies
+
+
 def test_rerun_with_same_input_is_idempotent(tmp_path):
     conn = store.open_db(tmp_path / "jobs.db")
     store.upsert_postings(conn, "Acme", "A", "lever", [_posting("1")])
