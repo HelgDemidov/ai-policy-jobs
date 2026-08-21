@@ -24,6 +24,10 @@ org_blocklist:
   - "mercor"                                          # gig-платформа
   - recruitment                                       # калибровка 2026-08-21: Deekay/Harnham/Diagonal recruitment
   - "Crossing Hurdles"                                # калибровка 2026-08-21: gig-платформа ($/hr в тайтле)
+  - "Consultancy.uk"                                  # калибровка 2026-08-21: СМИ про консалтинг-индустрию, не работодатель
+  - "The Health Foundation"                           # калибровка 2026-08-21: healthcare charity, не наша ниша
+  - "Lewisham Council"                                # калибровка 2026-08-21: муниципалитет
+  - "Youth Employment UK"                             # калибровка 2026-08-21: youth employment, не наша ниша
 
 # тайтл должен содержать ХОТЯ БЫ ОДНО (substring, регистронезависимо)
 title_require_any:
@@ -79,3 +83,10 @@ title_exclude_any:
   - "healthcare policy"
   - claims
   - medicaid   # калибровка 2026-08-21: BerryDunn/K.L. Scott — US-здравоохранение, не наша ниша
+  # калибровка 2026-08-21, второй раунд (по факту 80-строчного остатка после
+  # удаления Himalayas/jobspy_indeed) — не тот домен policy, а не не тот институт
+  - poverty
+  - "natural resources"
+  - housing
+  - fraud
+  - "hedge fund"

@@ -101,3 +101,28 @@ def test_calibration_title_exclude_catches_medicaid():
     filters = relevance_filter.load_filters()
     result = relevance_filter.evaluate("BerryDunn", "Medicaid Policy Director", filters)
     assert result.passed is False
+
+
+# --- second calibration round (2026-08-21, post Himalayas/jobspy_indeed
+# --- removal) — wrong policy *domain*, not wrong institution ---------------
+
+
+def test_calibration_org_blocklist_catches_non_target_orgs():
+    filters = relevance_filter.load_filters()
+    for org in ("Consultancy.uk", "The Health Foundation", "Lewisham Council", "Youth Employment UK"):
+        result = relevance_filter.evaluate(org, "Policy Officer", filters)
+        assert result.passed is False, org
+
+
+def test_calibration_title_exclude_catches_wrong_domain_terms():
+    filters = relevance_filter.load_filters()
+    cases = [
+        ("Bevan Foundation", "Head of Policy (Poverty)"),
+        ("FTI Consulting", "Senior Consultant, Energy & Natural Resources"),
+        ("Historic England", "Policy Adviser - Devolution, Housing and Investment"),
+        ("BioCatch", "Fraud Intelligence Research Analyst"),
+        ("Mondrian Alpha", "Equity Research Analyst - Hedge Fund"),
+    ]
+    for org, title in cases:
+        result = relevance_filter.evaluate(org, title, filters)
+        assert result.passed is False, f"{org} / {title}"
