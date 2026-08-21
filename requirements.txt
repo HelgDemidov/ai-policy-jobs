@@ -4,4 +4,4 @@ pandas==2.3.3
 python-jobspy==1.1.82
 sqlalchemy==2.0.51
 psycopg[binary]==3.3.4
-alembic==1.19.0
+alembic==1.19.1
