@@ -20,3 +20,8 @@ node_modules/
 .vscode/
 .idea/
 .DS_Store
+
+# Local-only: carries the curator's personal/citizenship narrative, kept out of
+# the (public) repo. Claude Code still reads these from disk.
+/CLAUDE.md
+/docs/backlog/BACKLOG.md
