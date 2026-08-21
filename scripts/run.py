@@ -35,7 +35,7 @@ from connectors.ats import (  # noqa: E402
     teamtailor,
     workable,
 )
-from connectors.query import adzuna, jobspy_search  # noqa: E402
+from connectors.query import adzuna, jobspy_search, un_secretariat  # noqa: E402
 from connectors.query import common as query_common  # noqa: E402
 
 CONNECTORS = {
@@ -53,6 +53,7 @@ CONNECTORS = {
 SEARCH_CONNECTORS = {
     "adzuna": adzuna.fetch,
     "jobspy_linkedin": jobspy_search.fetch_linkedin,
+    "un_secretariat": un_secretariat.fetch,
 }
 
 
