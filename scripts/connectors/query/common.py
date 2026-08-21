@@ -56,4 +56,14 @@ def derive_tier(source: str, spec: dict, posting: dict) -> str | None:
             return "C"
         return None
 
+    if source == "recruitee":
+        if posting.get("workplace_type") == "remote":
+            return "A"
+        location = (posting.get("location") or "").lower()
+        if any(kw in location for kw in US_KEYWORDS):
+            return "C"
+        if any(kw in location for kw in WESTERN_EUROPE_KEYWORDS):
+            return "B"
+        return None
+
     return None

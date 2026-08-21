@@ -48,3 +48,22 @@
     - "United Nations Conference on Trade and Development"
     - "United Nations Interregional Crime and Justice Research Institute"
     - "Office for Digital and Emerging Technologies"
+
+# unu-network — один общий Recruitee-фид на весь UN University (см.
+# scripts/connectors/query/recruitee.py), не одна организация на запись,
+# как остальные ATS-коннекторы в orgs.yaml — поэтому здесь, не там.
+# department_allowlist — точные значения поля department. Первые пять
+# подтверждены живьём 2026-08-21 (реальные записи в фиде на тот момент).
+# Последние два (UNU-CPR/UNU-EGOV) — НЕ подтверждены: 0 вакансий на момент
+# проверки, точное написание в фиде не наблюдалось — лучшее предположение
+# по аналогии с остальными (см. также донабор в docs/backlog/BACKLOG.md).
+- id: unu-network
+  source: recruitee
+  department_allowlist:
+    - "UNU-IAS"
+    - "UNU-INWEH"
+    - "UNU-WIDER"
+    - "UNU-Macau"
+    - "UNU Resource Nexus"
+    - "UNU-CPR"
+    - "UNU-EGOV"

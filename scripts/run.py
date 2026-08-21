@@ -25,18 +25,24 @@ import postgres_sync  # noqa: E402
 import relevance_filter  # noqa: E402
 import store  # noqa: E402
 from connectors.ats import (  # noqa: E402
+    applicantpro,
+    bamboohr,
     greenhouse,
     html_scrape,
     icims,
     jazzhr,
     lever,
+    oracle_fusion_hcm,
     personio,
     pinpoint,
+    recruiterbox,
     smartrecruiters,
     teamtailor,
     workable,
+    workday,
+    wp_json,
 )
-from connectors.query import adzuna, jobspy_search, un_secretariat  # noqa: E402
+from connectors.query import adzuna, jobspy_search, recruitee, un_secretariat  # noqa: E402
 from connectors.query import common as query_common  # noqa: E402
 
 CONNECTORS = {
@@ -49,12 +55,20 @@ CONNECTORS = {
     "pinpoint": pinpoint.fetch,
     "icims": icims.fetch,
     "jazzhr": jazzhr.fetch,
+    "bamboohr": bamboohr.fetch,
+    "recruiterbox": recruiterbox.fetch,
+    "workday": workday.fetch,
+    "oracle_fusion_hcm": oracle_fusion_hcm.fetch,
+    "applicantpro": applicantpro.fetch,
 }
+# html_scrape/wp_json aren't here — different fetch() signature (url(+extra
+# params), not a single slug) — explicit dispatch in _run_org_connectors.
 
 SEARCH_CONNECTORS = {
     "adzuna": adzuna.fetch,
     "jobspy_linkedin": jobspy_search.fetch_linkedin,
     "un_secretariat": un_secretariat.fetch,
+    "recruitee": recruitee.fetch,
 }
 
 
@@ -73,10 +87,18 @@ def _run_org_connectors(conn, orgs_path: Path, filters: dict) -> tuple[int, int,
     for entry in orgs:
         try:
             if entry["ats"] == "html_scrape":
-                # Different fetch() signature (url + optional list_selector,
-                # not a slug against a known platform) — an honest explicit
-                # branch beats forcing a fake uniform interface (spec §2).
-                postings = html_scrape.fetch(entry["url"], entry.get("list_selector"))
+                # Different fetch() signature (url + optional list_selector/
+                # needs_browser/use_browser_ua, not a slug against a known
+                # platform) — an honest explicit branch beats forcing a fake
+                # uniform interface (point-source-connectors spec §2).
+                postings = html_scrape.fetch(
+                    entry["url"],
+                    list_selector=entry.get("list_selector"),
+                    needs_browser=entry.get("needs_browser", False),
+                    use_browser_ua=entry.get("use_browser_ua", False),
+                )
+            elif entry["ats"] == "wp_json":
+                postings = wp_json.fetch(entry["url"], entry["post_type"])
             else:
                 postings = CONNECTORS[entry["ats"]](entry["slug"])
         except Exception as exc:  # noqa: BLE001 — isolate this org's failure, keep the batch going

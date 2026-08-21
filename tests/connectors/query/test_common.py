@@ -55,3 +55,23 @@ def test_un_secretariat_unrecognized_city_is_none():
     posting = {"location": "Rabat"}
     assert query_common.derive_tier("un_secretariat", {}, posting) is None
     assert query_common.derive_tier("un_secretariat", {}, {}) is None
+
+
+def test_recruitee_remote_posting_is_tier_a():
+    posting = {"workplace_type": "remote", "location": "Anywhere"}
+    assert query_common.derive_tier("recruitee", {}, posting) == "A"
+
+
+def test_recruitee_western_europe_location_is_tier_b():
+    posting = {"workplace_type": None, "location": "Bonn, Germany"}
+    assert query_common.derive_tier("recruitee", {}, posting) == "B"
+
+
+def test_recruitee_us_location_is_tier_c():
+    posting = {"workplace_type": None, "location": "New York, United States"}
+    assert query_common.derive_tier("recruitee", {}, posting) == "C"
+
+
+def test_recruitee_unrecognized_location_is_none():
+    posting = {"workplace_type": None, "location": "Putrajaya, Malaysia"}
+    assert query_common.derive_tier("recruitee", {}, posting) is None
