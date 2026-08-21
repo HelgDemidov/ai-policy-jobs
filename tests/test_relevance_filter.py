@@ -84,3 +84,20 @@ def test_known_gap_generic_corporate_title_with_no_exclude_hit_still_passes():
     filters = _filters(title_require_any=["governance"], title_exclude_any=["compliance"])
     result = relevance_filter.evaluate("Progressive Leasing", "AI Governance Lead", filters)
     assert result.passed is True  # known gap, not desired behavior
+
+
+# --- live-calibration regression cases (first backfill run, 2026-08-21) ----
+# config/filters.yaml's real org_blocklist/title_exclude_any additions,
+# pinned against the actual filters they were added for.
+
+
+def test_calibration_org_blocklist_catches_recruitment_agencies():
+    filters = relevance_filter.load_filters()
+    result = relevance_filter.evaluate("Harnham - Data & Analytics Recruitment", "Research Manager", filters)
+    assert result.passed is False
+
+
+def test_calibration_title_exclude_catches_medicaid():
+    filters = relevance_filter.load_filters()
+    result = relevance_filter.evaluate("BerryDunn", "Medicaid Policy Director", filters)
+    assert result.passed is False

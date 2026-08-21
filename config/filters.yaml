@@ -22,6 +22,8 @@ org_blocklist:
   - "Anson McCade"                                    # рекрутер
   - "Ethos"                                           # gig-платформа
   - "mercor"                                          # gig-платформа
+  - recruitment                                       # калибровка 2026-08-21: Deekay/Harnham/Diagonal recruitment
+  - "Crossing Hurdles"                                # калибровка 2026-08-21: gig-платформа ($/hr в тайтле)
 
 # тайтл должен содержать ХОТЯ БЫ ОДНО (substring, регистронезависимо)
 title_require_any:
@@ -76,3 +78,4 @@ title_exclude_any:
   - "medical policy"
   - "healthcare policy"
   - claims
+  - medicaid   # калибровка 2026-08-21: BerryDunn/K.L. Scott — US-здравоохранение, не наша ниша
