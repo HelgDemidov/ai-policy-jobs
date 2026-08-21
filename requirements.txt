@@ -5,3 +5,6 @@ python-jobspy==1.1.82
 sqlalchemy==2.0.51
 psycopg[binary]==3.3.4
 alembic==1.19.1
+beautifulsoup4==4.15.0
+lxml==6.1.2
+trafilatura==2.2.0

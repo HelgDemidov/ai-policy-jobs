@@ -1,0 +1,13 @@
+{
+  "name": "job-search-browser",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Headless-browser resolver for job-search: Puppeteer-core drives the Lightpanda engine over CDP (bypasses AWS WAF's JS challenge — see docs/tech_specs/point-source-connectors/spec.md §1). Ported from the sibling G2AI_ME repo's pipeline/browser/.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "puppeteer-core": "25.3.0"
+  }
+}

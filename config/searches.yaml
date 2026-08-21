@@ -32,3 +32,19 @@
   source: jobspy_linkedin
   query: AI policy analyst
   location: United Kingdom
+
+# un_secretariat — один публичный JSON-фид на весь UN Secretariat (см.
+# scripts/connectors/query/un_secretariat.py), не одна организация на
+# запись, как остальные ATS-коннекторы в orgs.yaml — поэтому здесь, не там.
+# dept_allowlist — точные значения поля dept.name. Первые два подтверждены
+# живьём 2026-08-21 (реальные записи в фиде на тот момент). Последние два
+# (UNICRI/UNODET) — НЕ подтверждены: у обоих 0 вакансий на момент проверки,
+# поэтому их точное dept.name в фиде не наблюдалось — лучшее предположение
+# по официальному названию, сверить, когда появится живая вакансия.
+- id: un-secretariat
+  source: un_secretariat
+  dept_allowlist:
+    - "Office for Disarmament Affairs"
+    - "United Nations Conference on Trade and Development"
+    - "United Nations Interregional Crime and Justice Research Institute"
+    - "Office for Digital and Emerging Technologies"

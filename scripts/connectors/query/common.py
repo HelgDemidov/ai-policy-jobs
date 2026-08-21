@@ -19,6 +19,15 @@ WESTERN_EUROPE_KEYWORDS = (
 )
 US_KEYWORDS = ("united states", "usa")
 
+# UN Secretariat postings carry a duty-station city, not a country — mapped
+# by hand for the common ones. Best-effort like the rest of this module;
+# an unrecognized city returns None rather than guessing.
+UN_DUTY_STATION_TIER_B_CITIES = {
+    "geneva", "vienna", "rome", "the hague", "brussels", "paris", "madrid",
+    "copenhagen", "berlin", "bonn",
+}
+UN_DUTY_STATION_TIER_C_CITIES = {"new york", "washington"}
+
 
 def derive_tier(source: str, spec: dict, posting: dict) -> str | None:
     if source == "adzuna":
@@ -37,6 +46,14 @@ def derive_tier(source: str, spec: dict, posting: dict) -> str | None:
             return "C"
         if any(kw in location for kw in WESTERN_EUROPE_KEYWORDS):
             return "B"
+        return None
+
+    if source == "un_secretariat":
+        city = (posting.get("location") or "").strip().lower()
+        if city in UN_DUTY_STATION_TIER_B_CITIES:
+            return "B"
+        if city in UN_DUTY_STATION_TIER_C_CITIES:
+            return "C"
         return None
 
     return None

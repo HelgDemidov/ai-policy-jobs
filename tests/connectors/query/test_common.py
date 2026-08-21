@@ -39,3 +39,19 @@ def test_jobspy_unknown_location_is_none():
 
 def test_unknown_source_is_none():
     assert query_common.derive_tier("some_future_source", {}, {}) is None
+
+
+def test_un_secretariat_geneva_is_tier_b():
+    posting = {"location": "GENEVA"}
+    assert query_common.derive_tier("un_secretariat", {}, posting) == "B"
+
+
+def test_un_secretariat_new_york_is_tier_c():
+    posting = {"location": "New York"}
+    assert query_common.derive_tier("un_secretariat", {}, posting) == "C"
+
+
+def test_un_secretariat_unrecognized_city_is_none():
+    posting = {"location": "Rabat"}
+    assert query_common.derive_tier("un_secretariat", {}, posting) is None
+    assert query_common.derive_tier("un_secretariat", {}, {}) is None

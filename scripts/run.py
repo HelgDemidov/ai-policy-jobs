@@ -24,15 +24,37 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import postgres_sync  # noqa: E402
 import relevance_filter  # noqa: E402
 import store  # noqa: E402
-from connectors.ats import greenhouse, lever, personio  # noqa: E402
-from connectors.query import adzuna, jobspy_search  # noqa: E402
+from connectors.ats import (  # noqa: E402
+    greenhouse,
+    html_scrape,
+    icims,
+    jazzhr,
+    lever,
+    personio,
+    pinpoint,
+    smartrecruiters,
+    teamtailor,
+    workable,
+)
+from connectors.query import adzuna, jobspy_search, un_secretariat  # noqa: E402
 from connectors.query import common as query_common  # noqa: E402
 
-CONNECTORS = {"lever": lever.fetch, "greenhouse": greenhouse.fetch, "personio": personio.fetch}
+CONNECTORS = {
+    "lever": lever.fetch,
+    "greenhouse": greenhouse.fetch,
+    "personio": personio.fetch,
+    "smartrecruiters": smartrecruiters.fetch,
+    "teamtailor": teamtailor.fetch,
+    "workable": workable.fetch,
+    "pinpoint": pinpoint.fetch,
+    "icims": icims.fetch,
+    "jazzhr": jazzhr.fetch,
+}
 
 SEARCH_CONNECTORS = {
     "adzuna": adzuna.fetch,
     "jobspy_linkedin": jobspy_search.fetch_linkedin,
+    "un_secretariat": un_secretariat.fetch,
 }
 
 
@@ -49,11 +71,17 @@ def _run_org_connectors(conn, orgs_path: Path, filters: dict) -> tuple[int, int,
     total_new = 0
     succeeded = 0
     for entry in orgs:
-        fetch = CONNECTORS[entry["ats"]]
         try:
-            postings = fetch(entry["slug"])
+            if entry["ats"] == "html_scrape":
+                # Different fetch() signature (url + optional list_selector,
+                # not a slug against a known platform) — an honest explicit
+                # branch beats forcing a fake uniform interface (spec §2).
+                postings = html_scrape.fetch(entry["url"], entry.get("list_selector"))
+            else:
+                postings = CONNECTORS[entry["ats"]](entry["slug"])
         except Exception as exc:  # noqa: BLE001 — isolate this org's failure, keep the batch going
-            print(f"  ! {entry['org']} ({entry['ats']}:{entry['slug']}) — failed: {exc}")
+            source_ref = entry.get("url") or entry.get("slug")
+            print(f"  ! {entry['org']} ({entry['ats']}:{source_ref}) — failed: {exc}")
             continue
         passing, filtered = _filter_out(postings, lambda _p: entry["org"], filters)
         new_count = store.upsert_postings(conn, entry["org"], entry.get("tier"), entry["ats"], passing)
