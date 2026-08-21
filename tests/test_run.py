@@ -46,6 +46,38 @@ def _no_filters_path(tmp_path):
 # --- ATS-family loop (unchanged behavior, searches loop is a no-op) --------
 
 
+def test_html_scrape_entries_use_url_and_list_selector_not_slug(tmp_path, monkeypatch):
+    orgs_path = tmp_path / "orgs.yaml"
+    orgs_path.write_text(
+        yaml.safe_dump(
+            [
+                {
+                    "org": "Gamma", "tier": "B", "ats": "html_scrape",
+                    "url": "https://gamma.org/careers", "list_selector": ".jobs",
+                },
+            ]
+        )
+    )
+    db_path = tmp_path / "jobs.db"
+    captured = {}
+
+    def _fake_fetch(url, list_selector=None):
+        captured["url"] = url
+        captured["list_selector"] = list_selector
+        return [_posting("h1")]
+
+    monkeypatch.setattr(run.html_scrape, "fetch", _fake_fetch)
+    run.main(
+        orgs_path=orgs_path, db_path=db_path,
+        searches_path=_no_searches_path(tmp_path), filters_path=_no_filters_path(tmp_path),
+    )
+
+    assert captured == {"url": "https://gamma.org/careers", "list_selector": ".jobs"}
+    conn = store.open_db(db_path)
+    rows = conn.execute("SELECT org, ats_id FROM postings").fetchall()
+    assert rows == [("Gamma", "h1")]
+
+
 def test_orchestrates_multiple_orgs_and_upserts_each(tmp_path, monkeypatch):
     orgs_path = tmp_path / "orgs.yaml"
     orgs_path.write_text(

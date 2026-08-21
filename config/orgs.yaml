@@ -105,3 +105,20 @@
   tier: C
   ats: jazzhr
   slug: newamerica
+
+- org: Center for Security and Emerging Technology
+  tier: C
+  ats: html_scrape
+  url: https://cset.georgetown.edu/careers/
+- org: Federation of American Scientists
+  tier: C
+  ats: html_scrape
+  url: https://fas.org/careers/
+- org: UNIDIR
+  tier: B
+  ats: html_scrape
+  url: https://unidir.org/who-we-are/join-our-team/
+- org: Simon Institute for Longterm Governance
+  tier: B
+  ats: html_scrape
+  url: https://simoninstitute.ch/jobs
