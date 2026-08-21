@@ -60,12 +60,14 @@ def test_full_pipeline_populates_all_three_postgres_tables(tmp_path, monkeypatch
     orgs_path = tmp_path / "orgs.yaml"
     orgs_path.write_text(yaml.safe_dump([{"org": "Acme", "tier": "A", "ats": "lever", "slug": "acme"}]))
     searches_path = tmp_path / "searches.yaml"
-    searches_path.write_text(yaml.safe_dump([{"id": "hima-policy", "source": "himalayas", "query": "policy"}]))
+    searches_path.write_text(
+        yaml.safe_dump([{"id": "adzuna-check", "source": "adzuna", "phrase": "policy", "country": "gb"}])
+    )
     db_path = tmp_path / "jobs.db"
 
     monkeypatch.setitem(run.CONNECTORS, "lever", lambda slug: [_posting("l1")])
     monkeypatch.setitem(
-        run.SEARCH_CONNECTORS, "himalayas",
+        run.SEARCH_CONNECTORS, "adzuna",
         lambda spec: [dict(_posting("h1", title="Policy Role"), org="R Street Institute")],
     )
 
@@ -80,7 +82,7 @@ def test_full_pipeline_populates_all_three_postgres_tables(tmp_path, monkeypatch
     assert orgs == {"Acme": "curated", "R Street Institute": "discovered"}
     assert {p.ats_id for p in postings} == {"l1", "h1"}
     assert all(p.org_id is not None for p in postings)  # every posting's org resolved
-    assert [s.search_id for s in searches] == ["hima-policy"]
+    assert [s.search_id for s in searches] == ["adzuna-check"]
 
 
 def test_full_pipeline_second_run_is_idempotent(tmp_path, monkeypatch):

@@ -2,10 +2,6 @@
 from connectors.query import common as query_common
 
 
-def test_himalayas_is_always_tier_a():
-    assert query_common.derive_tier("himalayas", {}, {}) == "A"
-
-
 def test_adzuna_western_europe_country_is_tier_b():
     assert query_common.derive_tier("adzuna", {"country": "gb"}, {}) == "B"
     assert query_common.derive_tier("adzuna", {"country": "be"}, {}) == "B"

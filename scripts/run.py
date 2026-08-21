@@ -25,13 +25,12 @@ import postgres_sync  # noqa: E402
 import relevance_filter  # noqa: E402
 import store  # noqa: E402
 from connectors.ats import greenhouse, lever, personio  # noqa: E402
-from connectors.query import adzuna, himalayas, jobspy_search  # noqa: E402
+from connectors.query import adzuna, jobspy_search  # noqa: E402
 from connectors.query import common as query_common  # noqa: E402
 
 CONNECTORS = {"lever": lever.fetch, "greenhouse": greenhouse.fetch, "personio": personio.fetch}
 
 SEARCH_CONNECTORS = {
-    "himalayas": himalayas.fetch,
     "adzuna": adzuna.fetch,
     "jobspy_linkedin": jobspy_search.fetch_linkedin,
     "jobspy_indeed": jobspy_search.fetch_indeed,

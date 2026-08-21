@@ -30,7 +30,7 @@ def _no_searches_path(tmp_path):
     """A deliberately nonexistent searches.yaml — without this, tests that
     don't care about the search loop would fall back to the real
     searches.yaml at repo root and fire real network requests against
-    Himalayas/Adzuna/JobSpy."""
+    Adzuna/JobSpy."""
     return tmp_path / "searches.yaml"
 
 
@@ -139,12 +139,12 @@ def _empty_orgs_path(tmp_path):
 def test_search_specs_run_and_upsert_with_tier(tmp_path, monkeypatch):
     searches_path = tmp_path / "searches.yaml"
     searches_path.write_text(
-        yaml.safe_dump([{"id": "hima-policy", "source": "himalayas", "query": "policy"}])
+        yaml.safe_dump([{"id": "adzuna-check", "source": "adzuna", "phrase": "think tank", "country": "gb"}])
     )
     db_path = tmp_path / "jobs.db"
 
     monkeypatch.setitem(
-        run.SEARCH_CONNECTORS, "himalayas",
+        run.SEARCH_CONNECTORS, "adzuna",
         lambda spec: [_search_posting("h1", "R Street Institute", title="Policy Director")],
     )
 
@@ -155,7 +155,7 @@ def test_search_specs_run_and_upsert_with_tier(tmp_path, monkeypatch):
 
     conn = store.open_db(db_path)
     row = conn.execute("SELECT org, title, tier, source FROM postings WHERE ats_id='h1'").fetchone()
-    assert row == ("R Street Institute", "Policy Director", "A", "himalayas")  # himalayas -> tier A always
+    assert row == ("R Street Institute", "Policy Director", "B", "adzuna")  # adzuna+gb -> tier B
 
 
 def test_search_spec_failure_does_not_stop_the_batch(tmp_path, monkeypatch, capsys):
@@ -163,14 +163,16 @@ def test_search_spec_failure_does_not_stop_the_batch(tmp_path, monkeypatch, caps
     searches_path.write_text(
         yaml.safe_dump(
             [
-                {"id": "broken-search", "source": "himalayas", "query": "x"},
+                {"id": "broken-search", "source": "jobspy_indeed", "query": "x"},
                 {"id": "fine-search", "source": "adzuna", "phrase": "think tank", "country": "gb"},
             ]
         )
     )
     db_path = tmp_path / "jobs.db"
 
-    monkeypatch.setitem(run.SEARCH_CONNECTORS, "himalayas", lambda spec: (_ for _ in ()).throw(RuntimeError("boom")))
+    monkeypatch.setitem(
+        run.SEARCH_CONNECTORS, "jobspy_indeed", lambda spec: (_ for _ in ()).throw(RuntimeError("boom"))
+    )
     monkeypatch.setitem(
         run.SEARCH_CONNECTORS, "adzuna",
         lambda spec: [_search_posting("a1", "InfluenceMap", title="Analyst")],
@@ -236,11 +238,11 @@ def test_non_manual_search_specs_still_run_with_linkedin_flag(tmp_path, monkeypa
     replace it."""
     searches_path = tmp_path / "searches.yaml"
     searches_path.write_text(
-        yaml.safe_dump([{"id": "hima-policy", "source": "himalayas", "query": "policy"}])
+        yaml.safe_dump([{"id": "adzuna-check", "source": "adzuna", "phrase": "policy", "country": "gb"}])
     )
     db_path = tmp_path / "jobs.db"
     monkeypatch.setitem(
-        run.SEARCH_CONNECTORS, "himalayas",
+        run.SEARCH_CONNECTORS, "adzuna",
         lambda spec: [_search_posting("h1", "Acme", title="Role")],
     )
 
@@ -256,11 +258,11 @@ def test_non_manual_search_specs_still_run_with_linkedin_flag(tmp_path, monkeypa
 def test_search_loop_never_reconciles_missing_postings(tmp_path, monkeypatch):
     searches_path = tmp_path / "searches.yaml"
     searches_path.write_text(
-        yaml.safe_dump([{"id": "hima-policy", "source": "himalayas", "query": "policy"}])
+        yaml.safe_dump([{"id": "adzuna-check", "source": "adzuna", "phrase": "policy", "country": "gb"}])
     )
     db_path = tmp_path / "jobs.db"
     monkeypatch.setitem(
-        run.SEARCH_CONNECTORS, "himalayas",
+        run.SEARCH_CONNECTORS, "adzuna",
         lambda spec: [_search_posting("h1", "Acme", title="Role")],
     )
     run.main(
@@ -270,7 +272,7 @@ def test_search_loop_never_reconciles_missing_postings(tmp_path, monkeypatch):
 
     # Next run, the search comes back empty — unlike the ATS family, this
     # must NOT mark the posting likely_closed (see store.py docstring).
-    monkeypatch.setitem(run.SEARCH_CONNECTORS, "himalayas", lambda spec: [])
+    monkeypatch.setitem(run.SEARCH_CONNECTORS, "adzuna", lambda spec: [])
     run.main(
         orgs_path=_empty_orgs_path(tmp_path), db_path=db_path,
         searches_path=searches_path, filters_path=_no_filters_path(tmp_path),
@@ -344,12 +346,12 @@ def test_main_returns_0_when_a_source_in_either_family_succeeds(tmp_path, monkey
     )
     searches_path = tmp_path / "searches.yaml"
     searches_path.write_text(
-        yaml.safe_dump([{"id": "hima-policy", "source": "himalayas", "query": "policy"}])
+        yaml.safe_dump([{"id": "adzuna-check", "source": "adzuna", "phrase": "policy", "country": "gb"}])
     )
     db_path = tmp_path / "jobs.db"
     monkeypatch.setitem(run.CONNECTORS, "lever", lambda slug: (_ for _ in ()).throw(RuntimeError("boom")))
     monkeypatch.setitem(
-        run.SEARCH_CONNECTORS, "himalayas",
+        run.SEARCH_CONNECTORS, "adzuna",
         lambda spec: [_search_posting("h1", "R Street Institute", title="Policy Director")],
     )
 
@@ -420,13 +422,13 @@ def test_org_family_posting_filtered_out_never_reaches_store(tmp_path, monkeypat
 def test_search_family_posting_filtered_out_never_reaches_store(tmp_path, monkeypatch):
     searches_path = tmp_path / "searches.yaml"
     searches_path.write_text(
-        yaml.safe_dump([{"id": "hima-policy", "source": "himalayas", "query": "policy"}])
+        yaml.safe_dump([{"id": "adzuna-check", "source": "adzuna", "phrase": "policy", "country": "gb"}])
     )
     db_path = tmp_path / "jobs.db"
     filters_path = tmp_path / "filters.yaml"
     filters_path.write_text("org_blocklist: [Spammy Recruiter]\n")
     monkeypatch.setitem(
-        run.SEARCH_CONNECTORS, "himalayas",
+        run.SEARCH_CONNECTORS, "adzuna",
         lambda spec: [
             _search_posting("keep", "R Street Institute", title="Policy Director"),
             _search_posting("drop", "Spammy Recruiter", title="Policy Analyst"),

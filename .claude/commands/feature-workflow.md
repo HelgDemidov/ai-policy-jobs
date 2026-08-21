@@ -52,7 +52,7 @@ One logical change per commit; never batch unrelated work. Conventional-commit p
 
 ## Step 5 — Hermeticity check (repo-specific, do not skip)
 
-Test hermeticity here is a **convention, not a guard**: `tests/conftest.py` only sets up `sys.path` for `scripts/` and `web/api/` — no fixtures, no isolation guard. Nothing structurally prevents a test from opening the live `data/jobs.db` or calling a real API. The suite stays clean because every test passes `tmp_path` explicitly and overrides `searches_path` — a new test that forgets either will silently write to production data or hammer Himalayas/Adzuna/JobSpy on every `pytest` run. This has happened once already (recorded in `docs/backlog/BACKLOG.md`).
+Test hermeticity here is a **convention, not a guard**: `tests/conftest.py` only sets up `sys.path` for `scripts/` and `web/api/` — no fixtures, no isolation guard. Nothing structurally prevents a test from opening the live `data/jobs.db` or calling a real API. The suite stays clean because every test passes `tmp_path` explicitly and overrides `searches_path` — a new test that forgets either will silently write to production data or hammer Adzuna/JobSpy on every `pytest` run. This has happened once already (recorded in `docs/backlog/BACKLOG.md`).
 
 So measure around the suite whenever a commit adds tests:
 
