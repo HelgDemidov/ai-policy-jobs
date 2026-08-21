@@ -41,7 +41,11 @@ def _run_full_pipeline(pg_engine, orgs_path, searches_path, db_path):
     postgres_sync.pull_statuses(pg_engine, conn)
     conn.close()
 
-    exit_code = run.main(orgs_path=orgs_path, db_path=db_path, searches_path=searches_path)
+    # Deliberately nonexistent filters.yaml, same idiom as test_run.py's
+    # _no_filters_path — otherwise these tests' placeholder titles ("Role")
+    # would be evaluated against the real production config/filters.yaml.
+    filters_path = db_path.parent / "filters.yaml"
+    exit_code = run.main(orgs_path=orgs_path, db_path=db_path, searches_path=searches_path, filters_path=filters_path)
 
     conn = store.open_db(db_path)
     postgres_sync.sync_organizations(pg_engine, orgs_path, conn)
