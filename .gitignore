@@ -21,7 +21,9 @@ node_modules/
 .idea/
 .DS_Store
 
-# Local-only: carries the curator's personal/citizenship narrative, kept out of
-# the (public) repo. Claude Code still reads these from disk.
+# Local-only, kept out of the (public) repo — carries the curator's personal
+# narrative and/or spec detail not meant for a public audience. Claude Code
+# still reads these from disk. docs/user_guides/ is the one tracked exception.
 /CLAUDE.md
-/docs/backlog/BACKLOG.md
+docs/*
+!docs/user_guides/
