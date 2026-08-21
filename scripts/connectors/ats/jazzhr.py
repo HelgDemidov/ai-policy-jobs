@@ -43,7 +43,7 @@ def fetch(slug: str) -> list[dict]:
         link = item.select_one("h3.list-group-item-heading a")
         if link is None or not link.get("href"):
             continue
-        url = link["href"]
+        url = str(link["href"])
         location, team = _meta(item)
         postings.append({
             "ats_id": url.rstrip("/").split("/")[-2],
