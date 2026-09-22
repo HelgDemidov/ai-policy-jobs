@@ -2,7 +2,7 @@ requests==2.34.2
 PyYAML==6.0.3
 pandas==2.3.3
 python-jobspy==1.1.82
-sqlalchemy==2.0.52
+sqlalchemy==2.0.54
 psycopg[binary]==3.3.5
 alembic==1.19.2
 beautifulsoup4==4.15.0
